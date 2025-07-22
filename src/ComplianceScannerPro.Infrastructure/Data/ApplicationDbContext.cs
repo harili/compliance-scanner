@@ -27,10 +27,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(u => u.Company).HasMaxLength(200);
             entity.Property(u => u.AgencyLogo).HasMaxLength(500);
             
+            // Relation optionnelle - un utilisateur peut avoir un abonnement
             entity.HasOne(u => u.Subscription)
                   .WithOne()
                   .HasForeignKey<Subscription>(s => s.UserId)
-                  .OnDelete(DeleteBehavior.SetNull);
+                  .OnDelete(DeleteBehavior.SetNull)
+                  .IsRequired(false);
         });
 
         // Subscription configuration
@@ -98,52 +100,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // Seed default subscription plans
-        SeedSubscriptionPlans(builder);
-    }
-
-    private void SeedSubscriptionPlans(ModelBuilder builder)
-    {
-        builder.Entity<Subscription>().HasData(
-            new Subscription
-            {
-                Id = 1,
-                PlanName = "Gratuit",
-                Price = 0,
-                MaxWebsites = 1,
-                MaxScansPerMonth = 5,
-                ApiAccess = false,
-                BrandedReports = false,
-                PrioritySupport = false,
-                UserId = "system",
-                StripePriceId = "free_plan"
-            },
-            new Subscription
-            {
-                Id = 2,
-                PlanName = "Freelance",
-                Price = 99,
-                MaxWebsites = 10,
-                MaxScansPerMonth = 100,
-                ApiAccess = true,
-                BrandedReports = false,
-                PrioritySupport = false,
-                UserId = "system",
-                StripePriceId = "price_freelance"
-            },
-            new Subscription
-            {
-                Id = 3,
-                PlanName = "Agence",
-                Price = 299,
-                MaxWebsites = 50,
-                MaxScansPerMonth = 500,
-                ApiAccess = true,
-                BrandedReports = true,
-                PrioritySupport = true,
-                UserId = "system",
-                StripePriceId = "price_agency"
-            }
-        );
+        // Les plans d'abonnement seront créés dynamiquement via Stripe
     }
 }

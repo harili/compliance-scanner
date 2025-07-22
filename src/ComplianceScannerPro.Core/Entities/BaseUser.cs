@@ -15,8 +15,8 @@ public class BaseUser
     public string? StripeCustomerId { get; set; }
     public string FullName => $"{FirstName} {LastName}".Trim();
     
-    public int SubscriptionId { get; set; }
-    public Subscription Subscription { get; set; } = null!;
+    public int? SubscriptionId { get; set; }
+    public Subscription? Subscription { get; set; }
     
     public ICollection<Website> Websites { get; set; } = new List<Website>();
     public ICollection<ScanResult> ScanResults { get; set; } = new List<ScanResult>();

@@ -1,0 +1,46 @@
+@using Microsoft.AspNetCore.Identity
+@using ComplianceScannerPro.Infrastructure.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+<ul class="navbar-nav">
+    @if (SignInManager.IsSignedIn(User))
+    {
+        <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-person-circle me-1"></i>
+                @User.Identity?.Name
+            </a>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" asp-area="Identity" asp-page="/Account/Manage/Index">
+                    <i class="bi bi-person me-2"></i> Mon Profil
+                </a></li>
+                <li><a class="dropdown-item" asp-page="/Subscriptions/Index">
+                    <i class="bi bi-credit-card me-2"></i> Abonnement
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Page("/", new { area = "" })">
+                        <button type="submit" class="dropdown-item">
+                            <i class="bi bi-box-arrow-right me-2"></i> Déconnexion
+                        </button>
+                    </form>
+                </li>
+            </ul>
+        </li>
+    }
+    else
+    {
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Identity" asp-page="/Account/Register">
+                <i class="bi bi-person-plus me-1"></i> Inscription
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" asp-area="Identity" asp-page="/Account/Login">
+                <i class="bi bi-box-arrow-in-right me-1"></i> Connexion
+            </a>
+        </li>
+    }
+</ul>
