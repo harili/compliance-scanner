@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using ComplianceScannerPro.Core.Entities;
 using ComplianceScannerPro.Core.Interfaces;
+using ComplianceScannerPro.Core.Services;
 using ComplianceScannerPro.Infrastructure.Data;
 using ComplianceScannerPro.Infrastructure.Repositories;
 using ComplianceScannerPro.Infrastructure.Identity;
@@ -51,6 +52,11 @@ builder.Services.AddScoped<IAccessibilityAnalyzer, ComplianceScannerPro.Infrastr
 builder.Services.AddScoped<IReportGenerator, ComplianceScannerPro.Infrastructure.Services.SimpleReportGenerator>();
 builder.Services.AddScoped<IScanService, ComplianceScannerPro.Infrastructure.Services.ScanService>();
 builder.Services.AddScoped<ISubscriptionService, ComplianceScannerPro.Infrastructure.Services.SubscriptionService>();
+builder.Services.AddScoped<IPaymentService, ComplianceScannerPro.Infrastructure.Services.StripePaymentService>();
+
+// Stripe configuration
+Stripe.StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
+builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("Stripe"));
 
 // Add controllers and API support
 builder.Services.AddControllers();

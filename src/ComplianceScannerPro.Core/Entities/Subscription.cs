@@ -15,6 +15,11 @@ public class Subscription
     public bool IsActive { get; set; } = true;
     public string? StripeSubscriptionId { get; set; }
     public string? StripePriceId { get; set; }
+    public string? StripeCustomerId { get; set; }
+    public ComplianceScannerPro.Shared.Enums.SubscriptionStatus Status { get; set; } = ComplianceScannerPro.Shared.Enums.SubscriptionStatus.Inactive;
+    public DateTime CurrentPeriodStart { get; set; }
+    public DateTime CurrentPeriodEnd { get; set; }
+    public DateTime? CanceledAt { get; set; }
     
     public string? UserId { get; set; }
 }

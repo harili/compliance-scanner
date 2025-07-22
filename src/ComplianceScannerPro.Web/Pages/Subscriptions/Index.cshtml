@@ -1,0 +1,335 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Abonnements et Tarifs";
+}
+
+<div class="row">
+    <div class="col-12">
+        <div class="text-center mb-5">
+            <h1 class="h2 fw-bold">
+                <i class="bi bi-credit-card text-primary me-2"></i>
+                Abonnements & Tarifs
+            </h1>
+            <p class="lead text-muted">
+                Choisissez le plan qui correspond à vos besoins d'agence web française
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Abonnement actuel -->
+@if (Model.CurrentSubscription != null)
+{
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm bg-light">
+                <div class="card-body p-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h5 class="fw-bold mb-1">
+                                <i class="bi bi-star text-warning me-2"></i>
+                                Votre plan actuel : @Model.CurrentSubscription.PlanName
+                            </h5>
+                            <p class="text-muted mb-2">
+                                @Model.CurrentSubscription.Price.ToString("C", new System.Globalization.CultureInfo("fr-FR"))/mois • 
+                                Renouvelé automatiquement le @Model.CurrentSubscription.CurrentPeriodEnd.ToString("dd/MM/yyyy")
+                            </p>
+                            <div class="d-flex gap-3">
+                                <span class="badge bg-success">@Model.CurrentSubscription.Status</span>
+                                <small class="text-muted">
+                                    <i class="bi bi-search me-1"></i>
+                                    @Model.ScansUsed/@Model.CurrentSubscription.MaxScansPerMonth scans ce mois
+                                </small>
+                                <small class="text-muted">
+                                    <i class="bi bi-globe me-1"></i>
+                                    @Model.WebsitesCount/@Model.CurrentSubscription.MaxWebsites sites
+                                </small>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <a href="@Model.CustomerPortalUrl" class="btn btn-outline-primary me-2">
+                                <i class="bi bi-gear me-1"></i> Gérer
+                            </a>
+                            @if (Model.CurrentSubscription.Status == ComplianceScannerPro.Shared.Enums.SubscriptionStatus.Active)
+                            {
+                                <form asp-page-handler="Cancel" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-outline-danger" 
+                                            onclick="return confirm('Êtes-vous sûr de vouloir annuler votre abonnement ?')">
+                                        <i class="bi bi-x-circle me-1"></i> Annuler
+                                    </button>
+                                </form>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Plans disponibles -->
+<div class="row g-4 mb-5">
+    <!-- Plan Gratuit -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100 @(Model.IsFreePlan ? "border-primary" : "")">
+            <div class="card-header bg-white border-0 text-center py-4">
+                <h3 class="h4 fw-bold">Gratuit</h3>
+                <div class="display-6 fw-bold text-primary">0€</div>
+                <small class="text-muted">par mois</small>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="d-flex align-items-center mb-2">
+                        <i class="bi bi-check text-success me-2"></i>
+                        3 sites web maximum
+                    </li>
+                    <li class="d-flex align-items-center mb-2">
+                        <i class="bi bi-check text-success me-2"></i>
+                        10 scans par mois
+                    </li>
+                    <li class="d-flex align-items-center mb-2">
+                        <i class="bi bi-check text-success me-2"></i>
+                        15 règles RGAA essentielles
+                    </li>
+                    <li class="d-flex align-items-center mb-2">
+                        <i class="bi bi-check text-success me-2"></i>
+                        Rapports PDF basiques
+                    </li>
+                    <li class="d-flex align-items-center mb-2 text-muted">
+                        <i class="bi bi-x me-2"></i>
+                        Pas de branding personnalisé
+                    </li>
+                    <li class="d-flex align-items-center mb-2 text-muted">
+                        <i class="bi bi-x me-2"></i>
+                        Support par email limité
+                    </li>
+                </ul>
+            </div>
+            <div class="card-footer bg-white border-0">
+                @if (Model.IsFreePlan)
+                {
+                    <div class="d-grid">
+                        <button class="btn btn-outline-primary" disabled>
+                            <i class="bi bi-check me-1"></i> Plan actuel
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <div class="d-grid">
+                        <form asp-page-handler="Downgrade" method="post">
+                            <button type="submit" class="btn btn-outline-secondary w-100"
+                                    onclick="return confirm('Rétrograder vers le plan gratuit ?')">
+                                <i class="bi bi-arrow-down me-1"></i> Rétrograder
+                            </button>
+                        </form>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Plan Starter -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100 @(Model.CurrentSubscription?.PlanName == "Starter" ? "border-primary" : "")">
+            <div class="card-header bg-white border-0 text-center py-4">
+                <h3 class="h4 fw-bold">Starter</h3>
+                <div class="display-6 fw-bold text-primary">99€</div>
+                <small class="text-muted">par mois</small>
+                <div class="mt-2">
+                    <span class="badge bg-primary">Populaire</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="d-flex align-items-center mb-2">
+                        <i class="bi bi-check text-success me-2"></i>
+                        10 sites web maximum
+                    </li>
+                    <li class="d-flex align-items-center mb-2">
+                        <i class="bi bi-check text-success me-2"></i>
+                        100 scans par mois
+                    </li>
+                    <li class="d-flex align-items-center mb-2">
+                        <i class="bi bi-check text-success me-2"></i>
+                        15 règles RGAA complètes
+                    </li>
+                    <li class="d-flex align-items-center mb-2">
+                        <i class="bi bi-check text-success me-2"></i>
+                        Rapports PDF brandés
+                    </li>
+                    <li class="d-flex align-items-center mb-2">
+                        <i class="bi bi-check text-success me-2"></i>
+                        Logo et couleurs personnalisés
+                    </li>
+                    <li class="d-flex align-items-center mb-2">
+                        <i class="bi bi-check text-success me-2"></i>
+                        Support email prioritaire
+                    </li>
+                </ul>
+            </div>
+            <div class="card-footer bg-white border-0">
+                @if (Model.CurrentSubscription?.PlanName == "Starter")
+                {
+                    <div class="d-grid">
+                        <button class="btn btn-primary" disabled>
+                            <i class="bi bi-check me-1"></i> Plan actuel
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <div class="d-grid">
+                        <form asp-page-handler="Subscribe" method="post">
+                            <input type="hidden" name="planName" value="Starter" />
+                            <input type="hidden" name="priceId" value="@Model.StarterPriceId" />
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-arrow-up me-1"></i> 
+                                @(Model.IsFreePlan ? "Commencer" : "Upgrade")
+                            </button>
+                        </form>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Plan Professional -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100 @(Model.CurrentSubscription?.PlanName == "Professional" ? "border-primary" : "")">
+            <div class="card-header bg-white border-0 text-center py-4">
+                <h3 class="h4 fw-bold">Professional</h3>
+                <div class="display-6 fw-bold text-primary">199€</div>
+                <small class="text-muted">par mois</small>
+                <div class="mt-2">
+                    <span class="badge bg-warning text-dark">Recommandé</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="d-flex align-items-center mb-2">
+                        <i class="bi bi-check text-success me-2"></i>
+                        50 sites web maximum
+                    </li>
+                    <li class="d-flex align-items-center mb-2">
+                        <i class="bi bi-check text-success me-2"></i>
+                        500 scans par mois
+                    </li>
+                    <li class="d-flex align-items-center mb-2">
+                        <i class="bi bi-check text-success me-2"></i>
+                        15 règles RGAA + recommandations avancées
+                    </li>
+                    <li class="d-flex align-items-center mb-2">
+                        <i class="bi bi-check text-success me-2"></i>
+                        Rapports PDF haute qualité
+                    </li>
+                    <li class="d-flex align-items-center mb-2">
+                        <i class="bi bi-check text-success me-2"></i>
+                        Branding complet agence
+                    </li>
+                    <li class="d-flex align-items-center mb-2">
+                        <i class="bi bi-check text-success me-2"></i>
+                        API REST complète
+                    </li>
+                    <li class="d-flex align-items-center mb-2">
+                        <i class="bi bi-check text-success me-2"></i>
+                        Support prioritaire + téléphone
+                    </li>
+                </ul>
+            </div>
+            <div class="card-footer bg-white border-0">
+                @if (Model.CurrentSubscription?.PlanName == "Professional")
+                {
+                    <div class="d-grid">
+                        <button class="btn btn-warning text-dark" disabled>
+                            <i class="bi bi-check me-1"></i> Plan actuel
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <div class="d-grid">
+                        <form asp-page-handler="Subscribe" method="post">
+                            <input type="hidden" name="planName" value="Professional" />
+                            <input type="hidden" name="priceId" value="@Model.ProfessionalPriceId" />
+                            <button type="submit" class="btn btn-warning text-dark w-100">
+                                <i class="bi bi-arrow-up me-1"></i> 
+                                @(Model.IsFreePlan ? "Commencer" : "Upgrade")
+                            </button>
+                        </form>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FAQ -->
+<div class="row">
+    <div class="col-12">
+        <h3 class="h4 fw-bold text-center mb-4">Questions fréquentes</h3>
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="card border-0 bg-light">
+                    <div class="card-body">
+                        <h6 class="fw-bold">Puis-je changer de plan à tout moment ?</h6>
+                        <p class="small text-muted mb-0">
+                            Oui, vous pouvez upgrader ou downgrader votre plan à tout moment. 
+                            Les changements prennent effet immédiatement.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card border-0 bg-light">
+                    <div class="card-body">
+                        <h6 class="fw-bold">Que se passe-t-il si je dépasse mes quotas ?</h6>
+                        <p class="small text-muted mb-0">
+                            Vos scans seront temporairement suspendus jusqu'au mois suivant 
+                            ou vous pourrez upgrader votre plan.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card border-0 bg-light">
+                    <div class="card-body">
+                        <h6 class="fw-bold">Les rapports PDF sont-ils brandés ?</h6>
+                        <p class="small text-muted mb-0">
+                            Oui, à partir du plan Starter, vous pouvez personnaliser vos rapports 
+                            avec votre logo et vos couleurs d'agence.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card border-0 bg-light">
+                    <div class="card-body">
+                        <h6 class="fw-bold">Y a-t-il une période d'essai ?</h6>
+                        <p class="small text-muted mb-0">
+                            Le plan gratuit vous permet de tester notre service. 
+                            Aucune carte bancaire requise pour commencer.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Support -->
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="text-center">
+            <h4 class="fw-bold mb-3">Besoin d'aide pour choisir ?</h4>
+            <p class="text-muted mb-4">
+                Notre équipe est là pour vous accompagner dans le choix du plan adapté à votre agence.
+            </p>
+            <a href="mailto:support@compliancescannerpro.com" class="btn btn-outline-primary">
+                <i class="bi bi-envelope me-2"></i>
+                Contactez-nous
+            </a>
+        </div>
+    </div>
+</div>

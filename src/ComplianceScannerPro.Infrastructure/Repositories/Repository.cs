@@ -26,6 +26,11 @@ public class Repository<T> : IRepository<T> where T : class
         return await _dbSet.FirstOrDefaultAsync(predicate);
     }
 
+    public async Task<T?> GetFirstOrDefaultAsync(Expression<Func<T, bool>> predicate)
+    {
+        return await _dbSet.FirstOrDefaultAsync(predicate);
+    }
+
     public async Task<List<T>> GetAllAsync()
     {
         return await _dbSet.ToListAsync();
@@ -42,16 +47,31 @@ public class Repository<T> : IRepository<T> where T : class
         return entity;
     }
 
+    public void Add(T entity)
+    {
+        _dbSet.Add(entity);
+    }
+
     public Task UpdateAsync(T entity)
     {
         _dbSet.Update(entity);
         return Task.CompletedTask;
     }
 
+    public void Update(T entity)
+    {
+        _dbSet.Update(entity);
+    }
+
     public Task DeleteAsync(T entity)
     {
         _dbSet.Remove(entity);
         return Task.CompletedTask;
+    }
+
+    public void Delete(T entity)
+    {
+        _dbSet.Remove(entity);
     }
 
     public async Task<int> CountAsync(Expression<Func<T, bool>>? predicate = null)

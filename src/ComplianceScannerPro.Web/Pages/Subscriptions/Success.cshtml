@@ -1,0 +1,145 @@
+@page
+@model SuccessModel
+@{
+    ViewData["Title"] = "Abonnement Confirmé";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="text-center py-5">
+            <!-- Icône de succès -->
+            <div class="bg-success bg-opacity-10 text-success rounded-circle p-4 d-inline-flex mb-4">
+                <i class="bi bi-check-circle display-4"></i>
+            </div>
+            
+            <h1 class="h2 fw-bold text-success mb-3">Abonnement confirmé !</h1>
+            <p class="lead text-muted mb-4">
+                Félicitations ! Votre abonnement au plan <strong>@Model.PlanName</strong> a été activé avec succès.
+            </p>
+
+            <!-- Détails de l'abonnement -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <div class="row text-start">
+                        <div class="col-md-6">
+                            <h6 class="fw-bold mb-2">
+                                <i class="bi bi-star text-warning me-2"></i>
+                                Plan souscrit
+                            </h6>
+                            <p class="text-muted mb-3">@Model.PlanName</p>
+                            
+                            <h6 class="fw-bold mb-2">
+                                <i class="bi bi-calendar text-primary me-2"></i>
+                                Période de facturation
+                            </h6>
+                            <p class="text-muted mb-3">
+                                Du @Model.CurrentPeriodStart.ToString("dd/MM/yyyy") 
+                                au @Model.CurrentPeriodEnd.ToString("dd/MM/yyyy")
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="fw-bold mb-2">
+                                <i class="bi bi-cash text-success me-2"></i>
+                                Montant
+                            </h6>
+                            <p class="text-muted mb-3">
+                                @Model.Amount.ToString("C", new System.Globalization.CultureInfo("fr-FR"))/mois
+                            </p>
+                            
+                            <h6 class="fw-bold mb-2">
+                                <i class="bi bi-graph-up text-info me-2"></i>
+                                Vos nouveaux quotas
+                            </h6>
+                            <div class="small text-muted">
+                                <div>• @Model.MaxWebsites sites web maximum</div>
+                                <div>• @Model.MaxScansPerMonth scans par mois</div>
+                                <div>• Rapports PDF @(Model.HasBranding ? "brandés" : "standards")</div>
+                                @if (Model.HasApiAccess)
+                                {
+                                    <div>• Accès API REST complet</div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions suggérées -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="card border-0 bg-light h-100">
+                        <div class="card-body text-center">
+                            <i class="bi bi-plus-circle text-primary fs-3 mb-3"></i>
+                            <h6 class="fw-bold">Ajoutez vos sites</h6>
+                            <p class="small text-muted mb-3">Commencez par ajouter vos sites web à analyser</p>
+                            <a asp-page="/Websites/Create" class="btn btn-primary btn-sm">
+                                Ajouter un site
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card border-0 bg-light h-100">
+                        <div class="card-body text-center">
+                            <i class="bi bi-search text-success fs-3 mb-3"></i>
+                            <h6 class="fw-bold">Lancez un scan</h6>
+                            <p class="small text-muted mb-3">Démarrez votre premier audit d'accessibilité RGAA</p>
+                            <a asp-page="/Scans/Start" class="btn btn-success btn-sm">
+                                Lancer un scan
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card border-0 bg-light h-100">
+                        <div class="card-body text-center">
+                            <i class="bi bi-palette text-warning fs-3 mb-3"></i>
+                            <h6 class="fw-bold">Personnalisez</h6>
+                            <p class="small text-muted mb-3">Configurez votre branding pour les rapports</p>
+                            <a asp-page="/Account/Profile" class="btn btn-warning btn-sm">
+                                Mon profil
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="d-flex justify-content-center gap-3">
+                <a asp-page="/Dashboard" class="btn btn-primary btn-lg">
+                    <i class="bi bi-speedometer2 me-2"></i>
+                    Aller au Dashboard
+                </a>
+                <a asp-page="/Subscriptions/Index" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>
+                    Retour aux abonnements
+                </a>
+            </div>
+
+            <!-- Information importante -->
+            <div class="alert alert-info border-0 mt-4">
+                <div class="d-flex align-items-start">
+                    <i class="bi bi-info-circle me-2 mt-1"></i>
+                    <div class="text-start">
+                        <strong>Information importante :</strong><br>
+                        Votre abonnement sera renouvelé automatiquement chaque mois. 
+                        Vous recevrez une facture par email et pouvez gérer votre abonnement à tout moment 
+                        depuis votre espace client.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Support -->
+            <div class="mt-4">
+                <p class="small text-muted">
+                    Questions ou besoin d'aide ? 
+                    <a href="mailto:support@compliancescannerpro.com" class="text-decoration-none">
+                        Contactez notre support
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>

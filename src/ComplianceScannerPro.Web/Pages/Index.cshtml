@@ -1,10 +1,281 @@
-﻿@page
+@page
 @model IndexModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Scanner RGAA pour Agences Web Françaises";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<!-- Hero Section -->
+<div class="row align-items-center py-5">
+    <div class="col-lg-6">
+        <h1 class="display-5 fw-bold text-dark mb-3">
+            Scanner d'accessibilité RGAA
+            <span class="text-primary">pour agences web françaises</span>
+        </h1>
+        <p class="lead text-muted mb-4">
+            Auditez automatiquement vos sites web selon les standards RGAA français. 
+            Générez des rapports professionnels brandés pour vos clients en moins de 2 minutes.
+        </p>
+        
+        <div class="d-flex flex-wrap gap-3 mb-4">
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <a asp-page="/Dashboard" class="btn btn-primary btn-lg px-4">
+                    <i class="bi bi-speedometer2 me-2"></i>
+                    Accéder au Dashboard
+                </a>
+                <a asp-page="/Websites/Create" class="btn btn-outline-primary btn-lg px-4">
+                    <i class="bi bi-plus-lg me-2"></i>
+                    Nouveau Site
+                </a>
+            }
+            else
+            {
+                <a asp-area="Identity" asp-page="/Account/Register" class="btn btn-primary btn-lg px-4">
+                    <i class="bi bi-rocket me-2"></i>
+                    Commencer Gratuitement
+                </a>
+                <a asp-area="Identity" asp-page="/Account/Login" class="btn btn-outline-primary btn-lg px-4">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>
+                    Se Connecter
+                </a>
+            }
+        </div>
+
+        <!-- Badges de confiance -->
+        <div class="d-flex flex-wrap gap-3 text-muted small">
+            <span><i class="bi bi-check-circle text-success me-1"></i> RGAA 4.1 officiel</span>
+            <span><i class="bi bi-check-circle text-success me-1"></i> EAA 2025 ready</span>
+            <span><i class="bi bi-check-circle text-success me-1"></i> Rapports brandés</span>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="position-relative">
+            <img src="~/img/dashboard-preview.png" alt="Aperçu du dashboard ComplianceScannerPro" 
+                 class="img-fluid rounded shadow-lg" style="max-height: 400px; width: 100%; object-fit: cover;">
+            
+            <!-- Badge flottant -->
+            <div class="position-absolute top-0 end-0 m-3">
+                <span class="badge bg-success fs-6 px-3 py-2">
+                    <i class="bi bi-shield-check me-1"></i>
+                    RGAA Certifié
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stats rapides -->
+<div class="row py-5 bg-light rounded-3 mb-5">
+    <div class="col-md-3 text-center">
+        <div class="display-6 fw-bold text-primary">15+</div>
+        <div class="text-muted">Règles RGAA</div>
+    </div>
+    <div class="col-md-3 text-center">
+        <div class="display-6 fw-bold text-success">< 2min</div>
+        <div class="text-muted">Temps de scan</div>
+    </div>
+    <div class="col-md-3 text-center">
+        <div class="display-6 fw-bold text-info">99%</div>
+        <div class="text-muted">Sites non conformes</div>
+    </div>
+    <div class="col-md-3 text-center">
+        <div class="display-6 fw-bold text-warning">Juin 2025</div>
+        <div class="text-muted">Obligation EAA</div>
+    </div>
+</div>
+
+<!-- Problème résolu -->
+<div class="row py-5">
+    <div class="col-lg-8 mx-auto text-center">
+        <h2 class="h3 fw-bold mb-4">Pourquoi les agences web ont besoin de ComplianceScannerPro ?</h2>
+        
+        <div class="row g-4 mt-4">
+            <div class="col-md-4">
+                <div class="card border-0 bg-light h-100">
+                    <div class="card-body text-center p-4">
+                        <i class="bi bi-exclamation-triangle text-danger fs-2 mb-3"></i>
+                        <h5 class="fw-bold">98% des sites non conformes</h5>
+                        <p class="text-muted small">La plupart des sites ne respectent pas les standards RGAA français</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card border-0 bg-light h-100">
+                    <div class="card-body text-center p-4">
+                        <i class="bi bi-calendar-event text-warning fs-2 mb-3"></i>
+                        <h5 class="fw-bold">EAA obligatoire juin 2025</h5>
+                        <p class="text-muted small">Tous les sites doivent être conformes aux standards d'accessibilité</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card border-0 bg-light h-100">
+                    <div class="card-body text-center p-4">
+                        <i class="bi bi-graph-down text-primary fs-2 mb-3"></i>
+                        <h5 class="fw-bold">Clients perdus</h5>
+                        <p class="text-muted small">Les agences perdent des clients faute d'expertise RGAA</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Fonctionnalités clés -->
+<div class="row py-5 bg-primary text-white rounded-3">
+    <div class="col-12">
+        <h2 class="h3 fw-bold text-center mb-5">Fonctionnalités pour agences professionnelles</h2>
+        
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3">
+                <div class="text-center">
+                    <i class="bi bi-robot fs-2 mb-3"></i>
+                    <h5 class="fw-bold">Scan automatisé</h5>
+                    <p class="small opacity-75">15 règles RGAA prioritaires analysées en moins de 2 minutes</p>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <div class="text-center">
+                    <i class="bi bi-file-earmark-pdf fs-2 mb-3"></i>
+                    <h5 class="fw-bold">Rapports brandés</h5>
+                    <p class="small opacity-75">PDF professionnels avec votre logo et vos couleurs d'agence</p>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <div class="text-center">
+                    <i class="bi bi-star fs-2 mb-3"></i>
+                    <h5 class="fw-bold">Score RGAA/100</h5>
+                    <p class="small opacity-75">Algorithme de calcul spécifique aux standards français</p>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <div class="text-center">
+                    <i class="bi bi-code fs-2 mb-3"></i>
+                    <h5 class="fw-bold">API REST</h5>
+                    <p class="small opacity-75">Intégration complète dans vos workflows d'agence</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tarifs -->
+<div class="row py-5">
+    <div class="col-12 text-center">
+        <h2 class="h3 fw-bold mb-4">Tarifs adaptés aux agences françaises</h2>
+        <p class="text-muted mb-5">Commencez gratuitement, upgradez quand votre agence grandit</p>
+        
+        <div class="row g-4 justify-content-center">
+            <!-- Plan Gratuit -->
+            <div class="col-lg-3 col-md-6">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white text-center py-3">
+                        <h4 class="fw-bold">Gratuit</h4>
+                        <div class="h2 text-primary">0€</div>
+                        <small class="text-muted">/mois</small>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled small">
+                            <li><i class="bi bi-check text-success me-1"></i> 3 sites web</li>
+                            <li><i class="bi bi-check text-success me-1"></i> 10 scans/mois</li>
+                            <li><i class="bi bi-check text-success me-1"></i> Rapports PDF basiques</li>
+                        </ul>
+                    </div>
+                    <div class="card-footer bg-white">
+                        <a asp-area="Identity" asp-page="/Account/Register" class="btn btn-outline-primary w-100">
+                            Commencer gratuitement
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Plan Starter -->
+            <div class="col-lg-3 col-md-6">
+                <div class="card border-primary shadow">
+                    <div class="card-header bg-primary text-white text-center py-3">
+                        <h4 class="fw-bold">Starter</h4>
+                        <div class="h2">99€</div>
+                        <small>/mois</small>
+                        <div class="mt-2"><span class="badge bg-white text-primary">Populaire</span></div>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled small">
+                            <li><i class="bi bi-check text-success me-1"></i> 10 sites web</li>
+                            <li><i class="bi bi-check text-success me-1"></i> 100 scans/mois</li>
+                            <li><i class="bi bi-check text-success me-1"></i> Rapports brandés</li>
+                            <li><i class="bi bi-check text-success me-1"></i> Support prioritaire</li>
+                        </ul>
+                    </div>
+                    <div class="card-footer bg-white">
+                        <a asp-page="/Subscriptions/Index" class="btn btn-primary w-100">
+                            Choisir ce plan
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Plan Professional -->
+            <div class="col-lg-3 col-md-6">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white text-center py-3">
+                        <h4 class="fw-bold">Professional</h4>
+                        <div class="h2 text-primary">199€</div>
+                        <small class="text-muted">/mois</small>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled small">
+                            <li><i class="bi bi-check text-success me-1"></i> 50 sites web</li>
+                            <li><i class="bi bi-check text-success me-1"></i> 500 scans/mois</li>
+                            <li><i class="bi bi-check text-success me-1"></i> API REST complète</li>
+                            <li><i class="bi bi-check text-success me-1"></i> Support téléphone</li>
+                        </ul>
+                    </div>
+                    <div class="card-footer bg-white">
+                        <a asp-page="/Subscriptions/Index" class="btn btn-outline-primary w-100">
+                            Choisir ce plan
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Call to Action -->
+<div class="row py-5 text-center">
+    <div class="col-lg-8 mx-auto">
+        <h2 class="h3 fw-bold mb-3">Prêt à rendre vos sites conformes EAA 2025 ?</h2>
+        <p class="text-muted mb-4">
+            Rejoignez les agences web françaises qui font confiance à ComplianceScannerPro 
+            pour leurs audits d'accessibilité RGAA.
+        </p>
+        
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <a asp-page="/Websites/Create" class="btn btn-primary btn-lg px-5">
+                <i class="bi bi-plus-lg me-2"></i>
+                Ajouter votre premier site
+            </a>
+        }
+        else
+        {
+            <a asp-area="Identity" asp-page="/Account/Register" class="btn btn-primary btn-lg px-5">
+                <i class="bi bi-rocket me-2"></i>
+                Commencer maintenant - Gratuit
+            </a>
+        }
+        
+        <div class="mt-4">
+            <small class="text-muted">
+                <i class="bi bi-shield-check me-1"></i>
+                Aucune carte bancaire requise • Commencez en 2 minutes • Support français
+            </small>
+        </div>
+    </div>
 </div>

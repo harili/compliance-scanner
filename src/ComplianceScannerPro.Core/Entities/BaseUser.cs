@@ -12,6 +12,8 @@ public class BaseUser
     public DateTime LastLoginAt { get; set; }
     public bool IsAgency { get; set; }
     public string? AgencyLogo { get; set; }
+    public string? StripeCustomerId { get; set; }
+    public string FullName => $"{FirstName} {LastName}".Trim();
     
     public int SubscriptionId { get; set; }
     public Subscription Subscription { get; set; } = null!;

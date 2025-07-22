@@ -1,0 +1,261 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Mes Sites Web";
+}
+
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="h3 fw-bold text-dark">
+                    <i class="bi bi-globe text-primary me-2"></i>
+                    Mes Sites Web
+                </h1>
+                <p class="text-muted mb-0">Gérez vos sites web et lancez des scans d'accessibilité RGAA</p>
+            </div>
+            <div>
+                <a asp-page="Create" class="btn btn-primary">
+                    <i class="bi bi-plus-lg me-1"></i> Nouveau Site
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quota d'utilisation -->
+@if (Model.MaxWebsites > 0)
+{
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-info border-0">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <div class="flex-grow-1">
+                        <strong>Plan @Model.SubscriptionPlan :</strong>
+                        Vous avez utilisé @Model.Websites.Count() sur @Model.MaxWebsites sites web autorisés.
+                    </div>
+                    @if (Model.Websites.Count() >= Model.MaxWebsites)
+                    {
+                        <a asp-page="/Subscriptions/Index" class="btn btn-primary btn-sm ms-2">
+                            Upgrade
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="row">
+    <div class="col-12">
+        @if (Model.Websites?.Any() == true)
+        {
+            <div class="row g-3">
+                @foreach (var website in Model.Websites)
+                {
+                    <div class="col-lg-6 col-xl-4">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div class="flex-grow-1">
+                                        <h5 class="card-title mb-1">@website.Name</h5>
+                                        <p class="text-muted small mb-0">
+                                            <i class="bi bi-link-45deg me-1"></i>
+                                            <a href="@website.Url" target="_blank" class="text-decoration-none">
+                                                @website.Url
+                                            </a>
+                                        </p>
+                                    </div>
+                                    <div class="dropdown">
+                                        <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="dropdown">
+                                            <i class="bi bi-three-dots-vertical"></i>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li>
+                                                <a class="dropdown-item" asp-page="Edit" asp-route-id="@website.Id">
+                                                    <i class="bi bi-pencil me-2"></i> Modifier
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item" asp-page="/Scans/Start" asp-route-websiteId="@website.Id">
+                                                    <i class="bi bi-search me-2"></i> Lancer un scan
+                                                </a>
+                                            </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <form asp-page-handler="Delete" asp-route-id="@website.Id" method="post" class="d-inline">
+                                                    <button type="submit" class="dropdown-item text-danger" 
+                                                            onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce site ?')">
+                                                        <i class="bi bi-trash me-2"></i> Supprimer
+                                                    </button>
+                                                </form>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <!-- Statistiques du site -->
+                                <div class="row g-2 mb-3">
+                                    <div class="col-4">
+                                        <div class="text-center">
+                                            <div class="fs-4 fw-bold text-primary">@website.TotalScans</div>
+                                            <small class="text-muted">Scans</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="text-center">
+                                            @if (website.LastScore.HasValue)
+                                            {
+                                                <div class="fs-4 fw-bold @GetScoreTextClass(website.LastScore.Value)">
+                                                    @website.LastScore.Value.ToString("F0")
+                                                </div>
+                                                <small class="text-muted">Score RGAA</small>
+                                            }
+                                            else
+                                            {
+                                                <div class="fs-4 fw-bold text-muted">-</div>
+                                                <small class="text-muted">Pas de score</small>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="text-center">
+                                            <div class="fs-4 fw-bold text-warning">@website.TotalIssues</div>
+                                            <small class="text-muted">Problèmes</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Badge de grade -->
+                                @if (website.LastScore.HasValue)
+                                {
+                                    <div class="text-center mb-3">
+                                        <span class="badge @GetScoreBadgeClass(website.LastScore.Value) fs-6 px-3 py-2">
+                                            Grade @GetGrade(website.LastScore.Value)
+                                        </span>
+                                    </div>
+                                }
+
+                                <!-- Dernier scan -->
+                                @if (website.LastScanDate.HasValue)
+                                {
+                                    <div class="text-center text-muted small">
+                                        <i class="bi bi-clock me-1"></i>
+                                        Dernier scan : @website.LastScanDate.Value.ToString("dd/MM/yyyy à HH:mm")
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="text-center text-muted small">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        Aucun scan effectué
+                                    </div>
+                                }
+
+                                <!-- Actions -->
+                                <div class="d-grid gap-2 mt-3">
+                                    <a asp-page="/Scans/Start" asp-route-websiteId="@website.Id" class="btn btn-success btn-sm">
+                                        <i class="bi bi-search me-1"></i> Nouveau Scan
+                                    </a>
+                                    @if (website.TotalScans > 0)
+                                    {
+                                        <a asp-page="/Scans/Index" asp-route-websiteId="@website.Id" class="btn btn-outline-primary btn-sm">
+                                            <i class="bi bi-list me-1"></i> Voir les scans
+                                        </a>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <!-- État vide -->
+            <div class="text-center py-5">
+                <div class="mb-4">
+                    <i class="bi bi-globe display-1 text-muted opacity-50"></i>
+                </div>
+                <h3 class="h4 fw-bold mb-3">Aucun site web enregistré</h3>
+                <p class="text-muted mb-4">
+                    Commencez par ajouter un site web pour lancer vos premiers scans d'accessibilité RGAA.
+                </p>
+                <a asp-page="Create" class="btn btn-primary btn-lg">
+                    <i class="bi bi-plus-lg me-2"></i> Ajouter votre premier site
+                </a>
+                
+                <div class="row mt-5">
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-3 d-inline-flex mb-3">
+                                <i class="bi bi-plus-lg fs-4"></i>
+                            </div>
+                            <h5 class="fw-bold">Ajoutez un site</h5>
+                            <p class="text-muted small">Renseignez l'URL de votre site web à analyser</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <div class="bg-success bg-opacity-10 text-success rounded-circle p-3 d-inline-flex mb-3">
+                                <i class="bi bi-search fs-4"></i>
+                            </div>
+                            <h5 class="fw-bold">Lancez un scan</h5>
+                            <p class="text-muted small">Notre robot analyse automatiquement l'accessibilité RGAA</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <div class="bg-info bg-opacity-10 text-info rounded-circle p-3 d-inline-flex mb-3">
+                                <i class="bi bi-file-earmark-pdf fs-4"></i>
+                            </div>
+                            <h5 class="fw-bold">Recevez le rapport</h5>
+                            <p class="text-muted small">Rapport PDF professionnel avec recommandations</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@functions {
+    private string GetScoreTextClass(decimal score)
+    {
+        return score switch
+        {
+            >= 80 => "text-success",
+            >= 60 => "text-warning",
+            >= 40 => "text-orange",
+            _ => "text-danger"
+        };
+    }
+    
+    private string GetScoreBadgeClass(decimal score)
+    {
+        return score switch
+        {
+            >= 80 => "bg-success",
+            >= 60 => "bg-warning",
+            >= 40 => "bg-orange",
+            _ => "bg-danger"
+        };
+    }
+    
+    private string GetGrade(decimal score)
+    {
+        return score switch
+        {
+            >= 90 => "A+",
+            >= 80 => "A",
+            >= 70 => "B+",
+            >= 60 => "B",
+            >= 50 => "C+",
+            >= 40 => "C",
+            >= 30 => "D+",
+            >= 20 => "D",
+            _ => "F"
+        };
+    }
+}

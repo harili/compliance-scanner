@@ -1,0 +1,380 @@
+@page
+@model DashboardModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="row">
+    <!-- Header avec titre et actions rapides -->
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="h3 fw-bold text-dark">
+                    <i class="bi bi-speedometer2 text-primary me-2"></i>
+                    Dashboard
+                </h1>
+                <p class="text-muted mb-0">Aperçu de votre activité de scan RGAA</p>
+            </div>
+            <div>
+                <a asp-page="/Websites/Create" class="btn btn-primary">
+                    <i class="bi bi-plus-lg me-1"></i> Nouveau Site
+                </a>
+                <a asp-page="/Scans/Start" class="btn btn-success">
+                    <i class="bi bi-search me-1"></i> Lancer un Scan
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Métriques principales (KPIs) -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="bg-primary bg-opacity-10 text-primary rounded-3 p-3">
+                            <i class="bi bi-globe fs-4"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h4 class="fw-bold mb-1">@Model.TotalWebsites</h4>
+                        <p class="text-muted mb-0 small">Sites Web</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="bg-success bg-opacity-10 text-success rounded-3 p-3">
+                            <i class="bi bi-search fs-4"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h4 class="fw-bold mb-1">@Model.TotalScans</h4>
+                        <p class="text-muted mb-0 small">Scans Effectués</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="bg-warning bg-opacity-10 text-warning rounded-3 p-3">
+                            <i class="bi bi-exclamation-triangle fs-4"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h4 class="fw-bold mb-1">@Model.TotalIssues</h4>
+                        <p class="text-muted mb-0 small">Problèmes Détectés</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="bg-info bg-opacity-10 text-info rounded-3 p-3">
+                            <i class="bi bi-star fs-4"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h4 class="fw-bold mb-1">@Model.AverageScore.ToString("F1")</h4>
+                        <p class="text-muted mb-0 small">Score Moyen RGAA</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quota de l'abonnement -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-credit-card text-primary me-2"></i>
+                        Utilisation de votre Plan @Model.SubscriptionPlan
+                    </h5>
+                    <a asp-page="/Subscriptions/Index" class="btn btn-outline-primary btn-sm">
+                        Gérer l'abonnement
+                    </a>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between small text-muted mb-1">
+                                <span>Scans ce mois</span>
+                                <span>@Model.ScansThisMonth / @Model.MaxScansPerMonth</span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar @(Model.ScansUsagePercentage > 80 ? "bg-danger" : Model.ScansUsagePercentage > 60 ? "bg-warning" : "bg-success")" 
+                                     style="width: @Model.ScansUsagePercentage%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between small text-muted mb-1">
+                                <span>Sites web</span>
+                                <span>@Model.TotalWebsites / @Model.MaxWebsites</span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar @(Model.WebsitesUsagePercentage > 80 ? "bg-danger" : Model.WebsitesUsagePercentage > 60 ? "bg-warning" : "bg-success")" 
+                                     style="width: @Model.WebsitesUsagePercentage%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Graphique des scores au fil du temps -->
+    <div class="col-lg-8 mb-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-graph-up text-primary me-2"></i>
+                    Évolution des Scores RGAA
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="scoresChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Top sites par score -->
+    <div class="col-lg-4 mb-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-trophy text-warning me-2"></i>
+                    Top Sites par Score
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                @if (Model.TopWebsitesByScore?.Any() == true)
+                {
+                    @foreach (var website in Model.TopWebsitesByScore)
+                    {
+                        <div class="d-flex align-items-center p-3 border-bottom">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">@website.Name</h6>
+                                <small class="text-muted">@website.Url</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge @GetScoreBadgeClass(website.LastScore) fs-6">
+                                    @website.LastScore.ToString("F0")/100
+                                </span>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="p-4 text-center text-muted">
+                        <i class="bi bi-info-circle fs-4 mb-2 d-block"></i>
+                        Aucun site scanné pour le moment
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scans récents -->
+<div class="row">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0 py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-clock-history text-primary me-2"></i>
+                        Scans Récents
+                    </h5>
+                    <a asp-page="/Scans/Index" class="btn btn-outline-primary btn-sm">
+                        Voir tous les scans
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                @if (Model.RecentScans?.Any() == true)
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Site Web</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                    <th>Score</th>
+                                    <th>Problèmes</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var scan in Model.RecentScans)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <i class="bi bi-globe text-primary me-2"></i>
+                                                <div>
+                                                    <div class="fw-medium">@scan.WebsiteName</div>
+                                                    <small class="text-muted">@scan.WebsiteUrl</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                @scan.CompletedAt?.ToString("dd/MM/yyyy HH:mm")
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <span class="badge @GetStatusBadgeClass(scan.Status)">
+                                                @GetStatusText(scan.Status)
+                                            </span>
+                                        </td>
+                                        <td>
+                                            @if (scan.AccessibilityScore.HasValue)
+                                            {
+                                                <span class="badge @GetScoreBadgeClass(scan.AccessibilityScore.Value) fs-6">
+                                                    @scan.AccessibilityScore.Value.ToString("F0")/100
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <span class="text-danger">
+                                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                                @scan.IssuesCount
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <a asp-page="/Scans/Details" asp-route-id="@scan.Id" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="p-4 text-center text-muted">
+                        <i class="bi bi-search fs-4 mb-2 d-block"></i>
+                        <p class="mb-2">Aucun scan effectué pour le moment</p>
+                        <a asp-page="/Scans/Start" class="btn btn-primary">
+                            <i class="bi bi-plus-lg me-1"></i>
+                            Lancer votre premier scan
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Graphique des scores au fil du temps
+        const ctx = document.getElementById('scoresChart').getContext('2d');
+        const scoresChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: @Html.Raw(Json.Serialize(Model.ScoreHistory.Select(s => s.Date.ToString("dd/MM")))),
+                datasets: [{
+                    label: 'Score RGAA Moyen',
+                    data: @Html.Raw(Json.Serialize(Model.ScoreHistory.Select(s => s.AverageScore))),
+                    borderColor: 'rgb(13, 110, 253)',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '/100';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+}
+
+@functions {
+    private string GetScoreBadgeClass(decimal score)
+    {
+        return score switch
+        {
+            >= 80 => "bg-success",
+            >= 60 => "bg-warning",
+            >= 40 => "bg-orange",
+            _ => "bg-danger"
+        };
+    }
+    
+    private string GetStatusBadgeClass(ComplianceScannerPro.Shared.Enums.ScanStatus status)
+    {
+        return status switch
+        {
+            ComplianceScannerPro.Shared.Enums.ScanStatus.Completed => "bg-success",
+            ComplianceScannerPro.Shared.Enums.ScanStatus.Running => "bg-info",
+            ComplianceScannerPro.Shared.Enums.ScanStatus.Failed => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+    
+    private string GetStatusText(ComplianceScannerPro.Shared.Enums.ScanStatus status)
+    {
+        return status switch
+        {
+            ComplianceScannerPro.Shared.Enums.ScanStatus.Pending => "En attente",
+            ComplianceScannerPro.Shared.Enums.ScanStatus.Running => "En cours",
+            ComplianceScannerPro.Shared.Enums.ScanStatus.Completed => "Terminé",
+            ComplianceScannerPro.Shared.Enums.ScanStatus.Failed => "Échoué",
+            _ => "Inconnu"
+        };
+    }
+}

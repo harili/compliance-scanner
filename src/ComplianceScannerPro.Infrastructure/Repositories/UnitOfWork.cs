@@ -14,6 +14,7 @@ public class UnitOfWork : IUnitOfWork
     private IRepository<ScanResult>? _scanResults;
     private IRepository<AccessibilityIssue>? _accessibilityIssues;
     private IRepository<Subscription>? _subscriptions;
+    private IRepository<User>? _users;
 
     public UnitOfWork(ApplicationDbContext context)
     {
@@ -32,9 +33,17 @@ public class UnitOfWork : IUnitOfWork
     public IRepository<Subscription> Subscriptions => 
         _subscriptions ??= new Repository<Subscription>(_context);
 
+    public IRepository<User> Users => 
+        _users ??= new Repository<User>(_context);
+
     public async Task<int> SaveChangesAsync()
     {
         return await _context.SaveChangesAsync();
+    }
+
+    public async Task SaveAsync()
+    {
+        await _context.SaveChangesAsync();
     }
 
     public async Task BeginTransactionAsync()

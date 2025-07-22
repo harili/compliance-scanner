@@ -1,0 +1,174 @@
+@page
+@model CreateModel
+@{
+    ViewData["Title"] = "Ajouter un Site Web";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- En-tête -->
+        <div class="text-center mb-5">
+            <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-3 d-inline-flex mb-3">
+                <i class="bi bi-plus-lg fs-2"></i>
+            </div>
+            <h1 class="h3 fw-bold">Ajouter un nouveau site web</h1>
+            <p class="text-muted">Renseignez les informations de votre site pour commencer les audits d'accessibilité RGAA</p>
+        </div>
+
+        <!-- Quota d'utilisation -->
+        @if (Model.IsQuotaExceeded)
+        {
+            <div class="alert alert-warning border-0 mb-4">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <div class="flex-grow-1">
+                        <strong>Quota atteint :</strong>
+                        Vous avez atteint la limite de @Model.MaxWebsites sites web pour votre plan @Model.SubscriptionPlan.
+                    </div>
+                    <a asp-page="/Subscriptions/Index" class="btn btn-warning btn-sm ms-2">
+                        Upgrade maintenant
+                    </a>
+                </div>
+            </div>
+        }
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <form method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    <!-- Nom du site -->
+                    <div class="mb-3">
+                        <label asp-for="Input.Name" class="form-label fw-medium">
+                            <i class="bi bi-tag me-1"></i> Nom du site *
+                        </label>
+                        <input asp-for="Input.Name" class="form-control form-control-lg" 
+                               placeholder="Ex: Site vitrine de mon agence" />
+                        <span asp-validation-for="Input.Name" class="text-danger small"></span>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Nom descriptif pour identifier facilement votre site dans le dashboard
+                        </div>
+                    </div>
+
+                    <!-- URL du site -->
+                    <div class="mb-3">
+                        <label asp-for="Input.Url" class="form-label fw-medium">
+                            <i class="bi bi-link-45deg me-1"></i> URL du site *
+                        </label>
+                        <input asp-for="Input.Url" class="form-control form-control-lg" 
+                               placeholder="https://www.exemple.com" />
+                        <span asp-validation-for="Input.Url" class="text-danger small"></span>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            URL complète de votre site web (doit commencer par http:// ou https://)
+                        </div>
+                    </div>
+
+                    <!-- Description (optionnelle) -->
+                    <div class="mb-4">
+                        <label asp-for="Input.Description" class="form-label fw-medium">
+                            <i class="bi bi-file-text me-1"></i> Description
+                            <span class="text-muted small">(optionnelle)</span>
+                        </label>
+                        <textarea asp-for="Input.Description" class="form-control" rows="3" 
+                                  placeholder="Description du site ou notes personnelles..."></textarea>
+                        <span asp-validation-for="Input.Description" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Informations sur le scan -->
+                    <div class="bg-light rounded-3 p-3 mb-4">
+                        <h6 class="fw-bold text-dark mb-2">
+                            <i class="bi bi-info-circle text-primary me-1"></i>
+                            Ce qui sera analysé
+                        </h6>
+                        <ul class="mb-0 small text-muted">
+                            <li>15 règles RGAA prioritaires pour les agences web françaises</li>
+                            <li>Analyse automatique de toutes les pages publiques accessibles</li>
+                            <li>Calcul d'un score d'accessibilité sur 100 avec grade A-F</li>
+                            <li>Génération d'un rapport PDF professionnel avec recommandations</li>
+                        </ul>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a asp-page="Index" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Retour
+                        </a>
+                        
+                        <div>
+                            <button type="submit" name="saveAndScan" value="true" class="btn btn-success me-2" 
+                                    @(Model.IsQuotaExceeded ? "disabled" : "")>
+                                <i class="bi bi-plus-lg me-1"></i>
+                                <i class="bi bi-search me-1"></i>
+                                Ajouter et Scanner
+                            </button>
+                            <button type="submit" class="btn btn-primary" 
+                                    @(Model.IsQuotaExceeded ? "disabled" : "")>
+                                <i class="bi bi-check-lg me-1"></i>
+                                Ajouter le Site
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Conseils -->
+        <div class="mt-4">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="d-flex">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-lightbulb text-warning fs-5"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-2">
+                            <h6 class="fw-bold mb-1">Conseil</h6>
+                            <p class="small text-muted mb-0">
+                                Utilisez des noms descriptifs pour faciliter la gestion de plusieurs sites.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-shield-check text-success fs-5"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-2">
+                            <h6 class="fw-bold mb-1">Sécurité</h6>
+                            <p class="small text-muted mb-0">
+                                Nous analysons uniquement les pages publiques de votre site.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    
+    <script>
+        // Validation en temps réel de l'URL
+        document.getElementById('Input_Url').addEventListener('blur', function() {
+            const url = this.value;
+            if (url && !url.match(/^https?:\/\/.+/)) {
+                this.classList.add('is-invalid');
+                // Ajouter un message d'erreur personnalisé
+                const feedback = this.parentNode.querySelector('.invalid-feedback') || document.createElement('div');
+                feedback.className = 'invalid-feedback';
+                feedback.textContent = 'L\'URL doit commencer par http:// ou https://';
+                if (!this.parentNode.querySelector('.invalid-feedback')) {
+                    this.parentNode.appendChild(feedback);
+                }
+            } else {
+                this.classList.remove('is-invalid');
+                const feedback = this.parentNode.querySelector('.invalid-feedback');
+                if (feedback) feedback.remove();
+            }
+        });
+    </script>
+}
