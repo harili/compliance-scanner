@@ -11,6 +11,7 @@ public class ApplicationUser : IdentityUser
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime LastLoginAt { get; set; }
     public bool IsAgency { get; set; }
+    public bool IsAdmin { get; set; }
     public string? AgencyLogo { get; set; }
     
     public int? SubscriptionId { get; set; }

@@ -109,7 +109,7 @@ public class DashboardModel : PageModel
         }
 
         // Calculer l'utilisation ce mois
-        var startOfMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+        var startOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         var scansThisMonth = await _unitOfWork.ScanResults
             .GetAllAsync(s => s.StartedAt >= startOfMonth);
         ScansThisMonth = scansThisMonth.Count();
@@ -175,7 +175,7 @@ public class DashboardModel : PageModel
     private void LoadScoreHistory(IEnumerable<ComplianceScannerPro.Core.Entities.ScanResult> completedScans)
     {
         // Grouper par jour sur les 30 derniers jours
-        var thirtyDaysAgo = DateTime.Now.AddDays(-30);
+        var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
         
         var scoresByDay = completedScans
             .Where(s => s.CompletedAt >= thirtyDaysAgo)
@@ -191,7 +191,7 @@ public class DashboardModel : PageModel
         // S'assurer qu'on a au moins quelques points de données
         if (!scoresByDay.Any())
         {
-            scoresByDay.Add(new ScoreHistoryDto { Date = DateTime.Now.Date, AverageScore = 0 });
+            scoresByDay.Add(new ScoreHistoryDto { Date = DateTime.UtcNow.Date, AverageScore = 0 });
         }
 
         ScoreHistory = scoresByDay;

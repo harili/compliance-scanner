@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Identity;
 using ComplianceScannerPro.Core.Entities;
 using ComplianceScannerPro.Core.Interfaces;
+using ComplianceScannerPro.Infrastructure.Identity;
 
 namespace ComplianceScannerPro.Infrastructure.Services;
 
@@ -8,17 +10,26 @@ public class SubscriptionService : ISubscriptionService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<SubscriptionService> _logger;
+    private readonly UserManager<ApplicationUser> _userManager;
 
-    public SubscriptionService(IUnitOfWork unitOfWork, ILogger<SubscriptionService> logger)
+    public SubscriptionService(IUnitOfWork unitOfWork, ILogger<SubscriptionService> logger, UserManager<ApplicationUser> userManager)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
+        _userManager = userManager;
     }
 
     public async Task<bool> CanUserAddWebsiteAsync(string userId)
     {
         try
         {
+            // Vérifier si l'utilisateur est admin/développeur
+            if (await IsUserAdminOrDeveloperAsync(userId))
+            {
+                _logger.LogDebug("Utilisateur admin/développeur {UserId}: limites bypassées pour les sites", userId);
+                return true;
+            }
+
             var subscription = await GetUserSubscriptionAsync(userId);
             if (subscription == null)
             {
@@ -46,6 +57,13 @@ public class SubscriptionService : ISubscriptionService
     {
         try
         {
+            // Vérifier si l'utilisateur est admin/développeur
+            if (await IsUserAdminOrDeveloperAsync(userId))
+            {
+                _logger.LogDebug("Utilisateur admin/développeur {UserId}: limites bypassées pour les scans", userId);
+                return true;
+            }
+
             var subscription = await GetUserSubscriptionAsync(userId);
             if (subscription == null)
             {
@@ -53,7 +71,7 @@ public class SubscriptionService : ISubscriptionService
             }
 
             // Compter les scans du mois en cours
-            var startOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+            var startOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
             var scanCount = await _unitOfWork.ScanResults.CountAsync(s => 
                 s.UserId == userId && 
                 s.StartedAt >= startOfMonth);
@@ -227,5 +245,31 @@ public class SubscriptionService : ISubscriptionService
         }
         
         return freeSubscription;
+    }
+
+    private async Task<bool> IsUserAdminOrDeveloperAsync(string userId)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return false;
+
+            // Vérifier si l'utilisateur est marqué comme admin
+            if (user.IsAdmin) return true;
+
+            // Vérifier les comptes développeur spécifiques
+            var developerEmails = new[] { "akhy.kays@gmail.com", "dev@compliancescannerpro.com" };
+            if (developerEmails.Contains(user.Email, StringComparer.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erreur lors de la vérification admin pour l'utilisateur {UserId}", userId);
+            return false;
+        }
     }
 }

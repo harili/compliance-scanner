@@ -328,12 +328,37 @@ public class ScansController : ControllerBase
     {
         return scanResult.Status switch
         {
-            Shared.Enums.ScanStatus.Pending => 0,
-            Shared.Enums.ScanStatus.Running => Math.Min(90, scanResult.PagesScanned * 10),
+            Shared.Enums.ScanStatus.Pending => 5, // Initialisation
+            Shared.Enums.ScanStatus.Running => CalculateRunningProgress(scanResult),
             Shared.Enums.ScanStatus.Completed => 100,
             Shared.Enums.ScanStatus.Failed => 0,
             Shared.Enums.ScanStatus.Cancelled => 0,
             _ => 0
         };
+    }
+
+    private static int CalculateRunningProgress(ScanResult scanResult)
+    {
+        // Phase 1: Crawling (10-40%) - estimé selon les pages trouvées
+        // Phase 2: Analyse (40-90%) - basé sur les pages scannées
+        // Phase 3: Finalisation (90-95%) - calcul du score
+        
+        var pagesScanned = scanResult.PagesScanned;
+        
+        if (pagesScanned == 0)
+        {
+            // Encore en phase de crawling
+            return 15; // Entre 10-40%
+        }
+        
+        // En phase d'analyse - progression basée sur les pages scannées
+        // Supposons un maximum de 50 pages (limite backend)
+        var maxPages = 50;
+        var analysisProgress = Math.Min(pagesScanned, maxPages);
+        
+        // Mapping: 1-50 pages = 40-90% de progression
+        var progressPercent = 40 + (analysisProgress * 50 / maxPages);
+        
+        return Math.Min(95, Math.Max(15, (int)progressPercent));
     }
 }

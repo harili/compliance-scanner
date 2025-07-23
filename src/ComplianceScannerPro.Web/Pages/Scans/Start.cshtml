@@ -1,0 +1,457 @@
+@page "/scans/start"
+@model ComplianceScannerPro.Web.Pages.Scans.StartModel
+@{
+    ViewData["Title"] = "Lancer un scan RGAA";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="display-6 mb-1">Scanner un site web</h1>
+                    <span class="text-muted">Audit d'accessibilité RGAA automatisé</span>
+                </div>
+                <a href="/websites" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Retour aux sites
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Étapes du scan -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 text-center">
+                            <div class="step-indicator active" id="step-select">
+                                <div class="step-circle">1</div>
+                                <div class="step-label">Sélection du site</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="step-indicator" id="step-crawl">
+                                <div class="step-circle">2</div>
+                                <div class="step-label">Exploration</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="step-indicator" id="step-analyze">
+                                <div class="step-circle">3</div>
+                                <div class="step-label">Analyse RGAA</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="step-indicator" id="step-report">
+                                <div class="step-circle">4</div>
+                                <div class="step-label">Rapport</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Section de sélection du site -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm" id="scan-selection-card">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-globe text-primary me-2"></i>
+                        Choisir le site à scanner
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.Websites?.Any() == true)
+                    {
+                        <div class="row">
+                            @foreach (var website in Model.Websites)
+                            {
+                                <div class="col-md-6 mb-3">
+                                    <div class="website-card" data-website-id="@website.Id" data-website-url="@website.Url" data-website-name="@website.Name">
+                                        <div class="card h-100 website-option">
+                                            <div class="card-body">
+                                                <div class="d-flex align-items-start justify-content-between">
+                                                    <div class="flex-grow-1">
+                                                        <h6 class="card-title mb-1">@website.Name</h6>
+                                                        <p class="card-text text-muted small mb-2">@website.Url</p>
+                                                        <div class="d-flex align-items-center">
+                                                            @if (website.LastScanAt.HasValue)
+                                                            {
+                                                                <span class="badge bg-light text-dark me-2">
+                                                                    Dernier scan : @website.LastScanAt.Value.ToString("dd/MM/yyyy")
+                                                                </span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="badge bg-warning text-dark me-2">
+                                                                    Jamais scanné
+                                                                </span>
+                                                            }
+                                                            @if (website.IsActive)
+                                                            {
+                                                                <span class="badge bg-success">Actif</span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="badge bg-secondary">Inactif</span>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                    <div class="ms-2">
+                                                        <button class="btn btn-primary btn-sm start-scan-btn" 
+                                                                data-website-id="@website.Id" 
+                                                                @(!website.IsActive ? "disabled" : "")>
+                                                            <i class="fas fa-play me-1"></i>Scanner
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="fas fa-globe fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">Aucun site web configuré</h5>
+                            <p class="text-muted mb-4">Ajoutez d'abord un site web pour pouvoir le scanner.</p>
+                            <a href="/websites/create" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Ajouter un site
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Section de progression du scan -->
+            <div class="card border-0 shadow-sm d-none" id="scan-progress-card">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-cog fa-spin text-primary me-2"></i>
+                        Scan en cours
+                    </h5>
+                    <button class="btn btn-outline-danger btn-sm" id="cancel-scan-btn">
+                        <i class="fas fa-times me-1"></i>Annuler
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="scan-info mb-4">
+                        <h6 id="scan-website-name" class="mb-1"></h6>
+                        <p id="scan-website-url" class="text-muted mb-0"></p>
+                    </div>
+
+                    <!-- Barre de progression -->
+                    <div class="progress mb-3" style="height: 8px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             id="scan-progress-bar" 
+                             role="progressbar" 
+                             style="width: 0%" 
+                             aria-valuenow="0" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                        </div>
+                    </div>
+                    
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <div class="scan-metric">
+                                <div class="metric-value" id="pages-scanned">0</div>
+                                <div class="metric-label">Pages scannées</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="scan-metric">
+                                <div class="metric-value" id="progress-percentage">0%</div>
+                                <div class="metric-label">Progression</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="scan-metric">
+                                <div class="metric-value" id="scan-status">En attente</div>
+                                <div class="metric-label">Statut</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Messages de statut -->
+                    <div class="alert alert-info mt-3" id="scan-status-message">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <span id="status-text">Initialisation du scan...</span>
+                    </div>
+
+                    <!-- Log détaillé -->
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0">Détails de l'exécution</h6>
+                            <button class="btn btn-link btn-sm" id="toggle-logs" data-bs-toggle="collapse" data-bs-target="#scan-logs">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                        </div>
+                        <div class="collapse" id="scan-logs">
+                            <div class="bg-light p-3 rounded" style="height: 200px; overflow-y: auto;">
+                                <div id="scan-log-content" class="font-monospace small">
+                                    <!-- Les logs apparaîtront ici -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section de résultats -->
+            <div class="card border-0 shadow-sm d-none" id="scan-results-card">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Scan terminé
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center mb-4">
+                        <div class="col-md-3">
+                            <div class="result-metric">
+                                <div class="metric-circle score-circle">
+                                    <span id="final-score">-</span>
+                                </div>
+                                <div class="metric-label">Score RGAA</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="result-metric">
+                                <div class="metric-badge" id="final-grade">-</div>
+                                <div class="metric-label">Note</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="result-metric">
+                                <div class="metric-number" id="total-issues">-</div>
+                                <div class="metric-label">Problèmes détectés</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="result-metric">
+                                <div class="metric-number" id="pages-analyzed">-</div>
+                                <div class="metric-label">Pages analysées</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <a href="#" id="view-results-btn" class="btn btn-primary w-100 mb-2">
+                                <i class="fas fa-eye me-2"></i>Voir les résultats détaillés
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <a href="#" id="download-report-btn" class="btn btn-outline-primary w-100 mb-2">
+                                <i class="fas fa-download me-2"></i>Télécharger le rapport PDF
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar avec informations -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        À propos du scan RGAA
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6>Que vérifions-nous ?</h6>
+                        <ul class="list-unstyled small">
+                            <li><i class="fas fa-check text-success me-2"></i>Images et alternatives textuelles</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Contraste des couleurs</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Navigation au clavier</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Structure des titres</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Formulaires et étiquettes</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Et 10+ autres règles RGAA</li>
+                        </ul>
+                    </div>
+
+                    <div class="mb-3">
+                        <h6>Durée estimée</h6>
+                        <p class="small text-muted mb-0">
+                            <i class="fas fa-clock me-1"></i>
+                            1-5 minutes selon la taille du site
+                        </p>
+                    </div>
+
+                    <div class="mb-3">
+                        <h6>Types de problèmes détectés</h6>
+                        <div class="d-flex flex-wrap gap-1">
+                            <span class="badge bg-danger">Critiques</span>
+                            <span class="badge bg-warning">Avertissements</span>
+                            <span class="badge bg-info">Informations</span>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-light border">
+                        <small>
+                            <i class="fas fa-lightbulb text-warning me-1"></i>
+                            <strong>Conseil :</strong> Assurez-vous que votre site est accessible publiquement pour un scan optimal.
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historique des scans récents -->
+            <div class="card border-0 shadow-sm mt-4">
+                <div class="card-header bg-white">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        Scans récents
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div id="recent-scans-list">
+                        <!-- Sera peuplé via JavaScript -->
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-clock fa-2x mb-2"></i>
+                            <p class="mb-0">Chargement...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/scan-interface.js"></script>
+}
+
+@section Styles {
+    <style>
+        .step-indicator {
+            position: relative;
+            padding: 20px 0;
+        }
+
+        .step-indicator.active .step-circle {
+            background-color: #0d6efd;
+            color: white;
+        }
+
+        .step-indicator.completed .step-circle {
+            background-color: #198754;
+            color: white;
+        }
+
+        .step-indicator.processing .step-circle {
+            background-color: #fd7e14;
+            color: white;
+            animation: pulse 1.5s infinite;
+        }
+
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #e9ecef;
+            color: #6c757d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin: 0 auto 10px;
+            border: 2px solid #dee2e6;
+        }
+
+        .step-label {
+            font-size: 0.875rem;
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .website-option {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+
+        .website-option:hover {
+            border-color: #0d6efd;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .scan-metric {
+            padding: 10px;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #0d6efd;
+        }
+
+        .metric-label {
+            font-size: 0.875rem;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .result-metric {
+            padding: 15px;
+        }
+
+        .score-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #0d6efd, #0056b3);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 0 auto 10px;
+        }
+
+        .metric-badge {
+            font-size: 1.25rem;
+            font-weight: bold;
+            padding: 8px 16px;
+            border-radius: 20px;
+            margin: 0 auto 10px;
+            display: inline-block;
+            min-width: 60px;
+        }
+
+        .metric-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #dc3545;
+        }
+
+        @@keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .progress-bar-animated {
+            animation: progress-bar-stripes 1s linear infinite;
+        }
+
+        #scan-log-content {
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+    </style>
+}

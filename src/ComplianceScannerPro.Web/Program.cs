@@ -27,7 +27,8 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
     ?? "Host=localhost;Database=compliancescannerdb;Username=scanuser;Password=SecurePass123!";
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(connectionString));
+    options.UseNpgsql(connectionString)
+           .AddInterceptors(new ComplianceScannerPro.Infrastructure.Data.UtcDateTimeInterceptor()));
 
 // Identity configuration
 builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
@@ -49,7 +50,7 @@ builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 // Business services
 builder.Services.AddHttpClient<IWebCrawlerService, ComplianceScannerPro.Infrastructure.Services.WebCrawlerService>();
 builder.Services.AddScoped<IAccessibilityAnalyzer, ComplianceScannerPro.Infrastructure.Services.AccessibilityAnalyzer>();
-builder.Services.AddScoped<IReportGenerator, ComplianceScannerPro.Infrastructure.Services.SimpleReportGenerator>();
+builder.Services.AddScoped<IReportGenerator, ComplianceScannerPro.Infrastructure.Services.QuestPdfReportGenerator>();
 builder.Services.AddScoped<IScanService, ComplianceScannerPro.Infrastructure.Services.ScanService>();
 builder.Services.AddScoped<ISubscriptionService, ComplianceScannerPro.Infrastructure.Services.SubscriptionService>();
 builder.Services.AddScoped<IPaymentService, ComplianceScannerPro.Infrastructure.Services.StripePaymentService>();
@@ -59,7 +60,12 @@ Stripe.StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
 builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("Stripe"));
 
 // Add controllers and API support
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Configurer les enums pour être sérialisés en strings au lieu de nombres
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
 builder.Services.AddRazorPages();
 
 // Swagger for API documentation

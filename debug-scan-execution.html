@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Scan Execution - ComplianceScannerPro</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 900px; margin: 50px auto; padding: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #0d6efd; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+        button.danger { background: #dc3545; }
+        button.danger:hover { background: #c82333; }
+        .result { margin-top: 20px; padding: 10px; border-radius: 4px; }
+        .success { background: #d1edff; border: 1px solid #0d6efd; }
+        .error { background: #f8d7da; border: 1px solid #dc3545; }
+        .warning { background: #fff3cd; border: 1px solid #ffc107; }
+        .log-container { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 15px; max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 12px; }
+        .step { border: 1px solid #ddd; margin: 10px 0; padding: 15px; border-radius: 4px; }
+        .scan-status { font-weight: bold; padding: 5px 10px; border-radius: 4px; }
+        .status-pending { background: #ffc107; color: #000; }
+        .status-running { background: #17a2b8; color: #fff; }
+        .status-completed { background: #28a745; color: #fff; }
+        .status-failed { background: #dc3545; color: #fff; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Debug Scan Execution - ComplianceScannerPro</h1>
+    
+    <div class="form-group">
+        <label>URL de l'application:</label>
+        <input type="text" id="baseUrl" value="https://localhost:7293" placeholder="https://localhost:7293">
+    </div>
+
+    <div class="step">
+        <h2>1. Test de connexion API</h2>
+        <button onclick="testConnection()">Tester la connexion</button>
+        <div id="connectionResult"></div>
+    </div>
+
+    <div class="step">
+        <h2>2. Lancer un scan de test</h2>
+        <div class="form-group">
+            <label>Website ID:</label>
+            <input type="number" id="websiteId" value="1" placeholder="1">
+        </div>
+        <button onclick="startTestScan()">Démarrer scan de test</button>
+        <div id="scanResult"></div>
+    </div>
+
+    <div class="step">
+        <h2>3. Suivi temps réel du scan</h2>
+        <button onclick="startMonitoring()">Démarrer le monitoring</button>
+        <button onclick="stopMonitoring()" class="danger">Arrêter le monitoring</button>
+        <div id="monitoringResult"></div>
+        <div id="scanLogs" class="log-container" style="display: none;"></div>
+    </div>
+
+    <div class="step">
+        <h2>4. Test direct des services</h2>
+        <div class="form-group">
+            <label>URL à tester:</label>
+            <input type="text" id="testUrl" value="https://example.com" placeholder="https://example.com">
+        </div>
+        <button onclick="testWebCrawler()">Test WebCrawler</button>
+        <button onclick="testAccessibilityAnalyzer()">Test AccessibilityAnalyzer</button>
+        <button onclick="testFullPipeline()">Test Pipeline Complet</button>
+        <div id="serviceTestResult"></div>
+    </div>
+
+    <div class="step">
+        <h2>5. Détails scan approfondi</h2>
+        <div class="form-group">
+            <label>Scan ID à analyser:</label>
+            <input type="text" id="detailScanId" placeholder="Entrez un Scan ID">
+        </div>
+        <button onclick="getScanDetails()">Analyser Scan</button>
+        <div id="scanDetailsResult"></div>
+    </div>
+
+    <script>
+        let monitoringInterval = null;
+        let currentScanId = null;
+
+        async function testConnection() {
+            const baseUrl = document.getElementById('baseUrl').value;
+            const resultDiv = document.getElementById('connectionResult');
+            
+            try {
+                const response = await fetch(`${baseUrl}/api/v1/websites`);
+                if (response.ok) {
+                    resultDiv.innerHTML = `<div class="result success">✅ Connexion OK - Status: ${response.status}</div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="result error">❌ Erreur de connexion - Status: ${response.status}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">❌ Erreur de connexion: ${error.message}</div>`;
+            }
+        }
+
+        async function startTestScan() {
+            const baseUrl = document.getElementById('baseUrl').value;
+            const websiteId = document.getElementById('websiteId').value;
+            const resultDiv = document.getElementById('scanResult');
+            
+            try {
+                resultDiv.innerHTML = `<div class="result warning">⏳ Démarrage du scan...</div>`;
+                
+                const response = await fetch(`${baseUrl}/api/v1/scans/start`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        websiteId: parseInt(websiteId)
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success && result.data) {
+                    currentScanId = result.data.scanId;
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            ✅ Scan démarré avec succès!<br>
+                            <strong>Scan ID:</strong> ${result.data.scanId}<br>
+                            <strong>Status:</strong> <span class="scan-status status-${result.data.status.toLowerCase()}">${result.data.status}</span><br>
+                            <strong>Démarré:</strong> ${new Date(result.data.startedAt).toLocaleString()}
+                        </div>
+                    `;
+                } else {
+                    const errorMsg = result.errors?.length > 0 ? result.errors[0] : result.message || 'Erreur inconnue';
+                    resultDiv.innerHTML = `<div class="result error">❌ Erreur: ${errorMsg}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">❌ Erreur de communication: ${error.message}</div>`;
+            }
+        }
+
+        async function startMonitoring() {
+            if (!currentScanId) {
+                document.getElementById('monitoringResult').innerHTML = 
+                    `<div class="result error">❌ Aucun scan en cours. Démarrez d'abord un scan.</div>`;
+                return;
+            }
+
+            const baseUrl = document.getElementById('baseUrl').value;
+            const resultDiv = document.getElementById('monitoringResult');
+            const logsDiv = document.getElementById('scanLogs');
+            
+            logsDiv.style.display = 'block';
+            logsDiv.innerHTML = '<h4>📊 Logs de monitoring:</h4>';
+            
+            resultDiv.innerHTML = `<div class="result warning">⏳ Monitoring en cours du scan ${currentScanId}...</div>`;
+
+            let attemptCount = 0;
+            const maxAttempts = 120; // 10 minutes à 5s d'intervalle
+
+            monitoringInterval = setInterval(async () => {
+                attemptCount++;
+                
+                try {
+                    const response = await fetch(`${baseUrl}/api/v1/scans/${currentScanId}/status`);
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        
+                        if (result.success && result.data) {
+                            const scan = result.data;
+                            const timestamp = new Date().toLocaleTimeString();
+                            
+                            logsDiv.innerHTML += `
+                                <div>[${timestamp}] Status: <span class="scan-status status-${scan.status.toLowerCase()}">${scan.status}</span> | 
+                                Pages: ${scan.pagesScanned || 0} | 
+                                Problèmes: ${scan.totalIssues || 0}</div>
+                            `;
+                            
+                            // Faire défiler vers le bas
+                            logsDiv.scrollTop = logsDiv.scrollHeight;
+                            
+                            if (scan.status === 'Completed') {
+                                stopMonitoring();
+                                resultDiv.innerHTML = `
+                                    <div class="result success">
+                                        ✅ Scan terminé avec succès!<br>
+                                        <strong>Score:</strong> ${scan.score}/100<br>
+                                        <strong>Grade:</strong> ${scan.grade}<br>
+                                        <strong>Pages scannées:</strong> ${scan.pagesScanned}<br>
+                                        <strong>Problèmes trouvés:</strong> ${scan.totalIssues}
+                                    </div>
+                                `;
+                                return;
+                            } else if (scan.status === 'Failed') {
+                                stopMonitoring();
+                                resultDiv.innerHTML = `
+                                    <div class="result error">
+                                        ❌ Scan échoué!<br>
+                                        <strong>Erreur:</strong> ${scan.errorMessage || 'Erreur inconnue'}
+                                    </div>
+                                `;
+                                return;
+                            }
+                        }
+                    } else {
+                        logsDiv.innerHTML += `<div class="error">[${new Date().toLocaleTimeString()}] Erreur API: ${response.status}</div>`;
+                    }
+                } catch (error) {
+                    logsDiv.innerHTML += `<div class="error">[${new Date().toLocaleTimeString()}] Erreur: ${error.message}</div>`;
+                }
+                
+                if (attemptCount >= maxAttempts) {
+                    stopMonitoring();
+                    resultDiv.innerHTML = `<div class="result error">❌ Timeout: Le scan n'a pas terminé après 10 minutes.</div>`;
+                }
+            }, 5000); // Toutes les 5 secondes
+        }
+
+        function stopMonitoring() {
+            if (monitoringInterval) {
+                clearInterval(monitoringInterval);
+                monitoringInterval = null;
+            }
+        }
+
+        async function testWebCrawler() {
+            const baseUrl = document.getElementById('baseUrl').value;
+            const testUrl = document.getElementById('testUrl').value;
+            const resultDiv = document.getElementById('serviceTestResult');
+            
+            try {
+                resultDiv.innerHTML = `<div class="result warning">⏳ Test du WebCrawler...</div>`;
+                
+                const response = await fetch(`${baseUrl}/api/v1/debug/test-crawler`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url: testUrl })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            ✅ WebCrawler fonctionne!<br>
+                            <strong>URLs trouvées:</strong> ${result.data.urlCount}<br>
+                            <strong>Temps:</strong> ${result.data.duration}ms
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="result error">❌ Erreur WebCrawler: ${result.message}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">❌ Erreur de communication: ${error.message}</div>`;
+            }
+        }
+
+        async function testAccessibilityAnalyzer() {
+            const baseUrl = document.getElementById('baseUrl').value;
+            const testUrl = document.getElementById('testUrl').value;
+            const resultDiv = document.getElementById('serviceTestResult');
+            
+            try {
+                resultDiv.innerHTML = `<div class="result warning">⏳ Test de l'AccessibilityAnalyzer...</div>`;
+                
+                const response = await fetch(`${baseUrl}/api/v1/debug/test-analyzer`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url: testUrl })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            ✅ AccessibilityAnalyzer fonctionne!<br>
+                            <strong>Problèmes trouvés:</strong> ${result.data.issueCount}<br>
+                            <strong>Temps:</strong> ${result.data.duration}ms
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="result error">❌ Erreur AccessibilityAnalyzer: ${result.message}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">❌ Erreur de communication: ${error.message}</div>`;
+            }
+        }
+
+        async function testFullPipeline() {
+            const baseUrl = document.getElementById('baseUrl').value;
+            const testUrl = document.getElementById('testUrl').value;
+            const resultDiv = document.getElementById('serviceTestResult');
+            
+            try {
+                resultDiv.innerHTML = `<div class="result warning">⏳ Test du pipeline complet...</div>`;
+                
+                const response = await fetch(`${baseUrl}/api/v1/debug/test-full-pipeline`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url: testUrl })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    const data = result.data;
+                    let stepsHtml = '<h4>📋 Étapes du pipeline:</h4>';
+                    data.steps.forEach(step => {
+                        const icon = step.success ? '✅' : '❌';
+                        stepsHtml += `<div>${icon} ${step.step}: ${step.details} (${step.duration}ms)</div>`;
+                    });
+                    
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            ✅ Pipeline complet terminé!<br>
+                            <strong>Temps total:</strong> ${data.totalDuration}ms<br>
+                            <strong>URLs trouvées:</strong> ${data.summary.urlsFound}<br>
+                            <strong>Problèmes trouvés:</strong> ${data.summary.issuesFound}<br>
+                            ${stepsHtml}
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="result error">❌ Erreur Pipeline: ${result.message}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">❌ Erreur de communication: ${error.message}</div>`;
+            }
+        }
+
+        async function getScanDetails() {
+            const baseUrl = document.getElementById('baseUrl').value;
+            const scanId = document.getElementById('detailScanId').value;
+            const resultDiv = document.getElementById('scanDetailsResult');
+            
+            if (!scanId.trim()) {
+                resultDiv.innerHTML = `<div class="result error">❌ Veuillez entrer un Scan ID</div>`;
+                return;
+            }
+            
+            try {
+                resultDiv.innerHTML = `<div class="result warning">⏳ Récupération des détails du scan...</div>`;
+                
+                const response = await fetch(`${baseUrl}/api/v1/debug/scan-details/${scanId}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const data = result.data;
+                    const scan = data.scan;
+                    const website = data.website;
+                    const stats = data.statistics;
+                    
+                    let statusClass = '';
+                    switch(scan.status.toLowerCase()) {
+                        case 'pending': statusClass = 'status-pending'; break;
+                        case 'running': statusClass = 'status-running'; break;
+                        case 'completed': statusClass = 'status-completed'; break;
+                        case 'failed': statusClass = 'status-failed'; break;
+                    }
+                    
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            <h4>📊 Détails du scan ${scan.scanId}</h4>
+                            
+                            <h5>🔍 Informations générales:</h5>
+                            <p><strong>Status:</strong> <span class="scan-status ${statusClass}">${scan.status}</span></p>
+                            <p><strong>Démarré:</strong> ${new Date(scan.startedAt).toLocaleString()}</p>
+                            ${scan.completedAt ? `<p><strong>Terminé:</strong> ${new Date(scan.completedAt).toLocaleString()}</p>` : ''}
+                            <p><strong>Pages scannées:</strong> ${scan.pagesScanned || 'N/A'}</p>
+                            ${scan.score ? `<p><strong>Score:</strong> ${scan.score}/100</p>` : ''}
+                            ${scan.grade ? `<p><strong>Grade:</strong> ${scan.grade}</p>` : ''}
+                            ${scan.errorMessage ? `<p><strong>Erreur:</strong> ${scan.errorMessage}</p>` : ''}
+                            
+                            ${website ? `
+                                <h5>🌐 Site web:</h5>
+                                <p><strong>Nom:</strong> ${website.name}</p>
+                                <p><strong>URL:</strong> ${website.url}</p>
+                                <p><strong>Actif:</strong> ${website.isActive ? 'Oui' : 'Non'}</p>
+                                <p><strong>Profondeur max:</strong> ${website.maxDepth}</p>
+                                <p><strong>Sous-domaines:</strong> ${website.includeSubdomains ? 'Oui' : 'Non'}</p>
+                            ` : ''}
+                            
+                            <h5>📈 Statistiques:</h5>
+                            <p><strong>Total problèmes:</strong> ${stats.totalIssues}</p>
+                            <p><strong>Par sévérité:</strong> ${Object.entries(stats.issuesBySeverity).map(([k,v]) => `${k}: ${v}`).join(', ')}</p>
+                            
+                            ${data.issues.length > 0 ? `
+                                <h5>🚨 Exemples de problèmes:</h5>
+                                <div style="max-height: 200px; overflow-y: auto;">
+                                    ${data.issues.map(issue => `
+                                        <div style="border: 1px solid #ddd; margin: 5px 0; padding: 5px; border-radius: 3px;">
+                                            <strong>${issue.title}</strong> (${issue.severity})<br>
+                                            <small>${issue.pageUrl}</small><br>
+                                            <small>Règle: ${issue.rgaaRule}</small><br>
+                                            ${issue.description || 'Pas de description'}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="result error">❌ ${result.message}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">❌ Erreur de communication: ${error.message}</div>`;
+            }
+        }
+
+        // Auto-test de connexion au chargement
+        window.onload = function() {
+            testConnection();
+        };
+    </script>
+</body>
+</html>

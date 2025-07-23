@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using ComplianceScannerPro.Core.Entities;
 using ComplianceScannerPro.Shared.Enums;
 using ComplianceScannerPro.Core.Interfaces;
@@ -9,24 +10,18 @@ namespace ComplianceScannerPro.Infrastructure.Services;
 public class ScanService : IScanService
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IWebCrawlerService _webCrawler;
-    private readonly IAccessibilityAnalyzer _accessibilityAnalyzer;
-    private readonly IReportGenerator _reportGenerator;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly ILogger<ScanService> _logger;
     private readonly IConfiguration _configuration;
 
     public ScanService(
         IUnitOfWork unitOfWork,
-        IWebCrawlerService webCrawler,
-        IAccessibilityAnalyzer accessibilityAnalyzer,
-        IReportGenerator reportGenerator,
+        IServiceScopeFactory serviceScopeFactory,
         ILogger<ScanService> logger,
         IConfiguration configuration)
     {
         _unitOfWork = unitOfWork;
-        _webCrawler = webCrawler;
-        _accessibilityAnalyzer = accessibilityAnalyzer;
-        _reportGenerator = reportGenerator;
+        _serviceScopeFactory = serviceScopeFactory;
         _logger = logger;
         _configuration = configuration;
     }
@@ -53,8 +48,35 @@ public class ScanService : IScanService
         await _unitOfWork.ScanResults.AddAsync(scanResult);
         await _unitOfWork.SaveChangesAsync();
 
-        // Démarrer le scan en arrière-plan
-        _ = Task.Run(async () => await ExecuteScanAsync(scanResult.Id));
+        // Démarrer le scan en arrière-plan avec timeout et gestion d'erreurs
+        _ = Task.Run(async () => 
+        {
+            using var scope = _serviceScopeFactory.CreateScope();
+            var scopedLogger = scope.ServiceProvider.GetRequiredService<ILogger<ScanService>>();
+            
+            try
+            {
+                using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10)); // Timeout de 10 minutes
+                await ExecuteScanAsync(scanResult.Id, cts.Token, scope.ServiceProvider);
+            }
+            catch (Exception ex)
+            {
+                scopedLogger.LogError(ex, "❌ [SCAN-CRITICAL] Erreur critique dans la tâche de scan {ScanId}", scanResult.ScanId);
+                try
+                {
+                    var scopedUnitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+                    var failedScan = await scopedUnitOfWork.ScanResults.GetByIdAsync(scanResult.Id);
+                    if (failedScan != null)
+                    {
+                        await UpdateScanStatus(failedScan, ScanStatus.Failed, $"Erreur critique: {ex.Message}", scopedUnitOfWork);
+                    }
+                }
+                catch (Exception updateEx)
+                {
+                    scopedLogger.LogError(updateEx, "❌ [SCAN-CRITICAL] Impossible de mettre à jour le statut du scan échoué {ScanId}", scanResult.ScanId);
+                }
+            }
+        });
 
         _logger.LogInformation("Scan {ScanId} créé pour le site {WebsiteId}", scanResult.ScanId, websiteId);
         
@@ -91,59 +113,133 @@ public class ScanService : IScanService
         return true;
     }
 
-    private async Task ExecuteScanAsync(int scanResultId)
+    private async Task ExecuteScanAsync(int scanResultId, CancellationToken cancellationToken, IServiceProvider serviceProvider)
     {
+        var logger = serviceProvider.GetRequiredService<ILogger<ScanService>>();
+        var unitOfWork = serviceProvider.GetRequiredService<IUnitOfWork>();
+        var webCrawler = serviceProvider.GetRequiredService<IWebCrawlerService>();
+        var accessibilityAnalyzer = serviceProvider.GetRequiredService<IAccessibilityAnalyzer>();
+        
         ScanResult? scanResult = null;
         
         try
         {
-            scanResult = await _unitOfWork.ScanResults.GetByIdAsync(scanResultId);
+            logger.LogInformation("🚀 [SCAN-START] Début ExecuteScanAsync pour scanResultId={ScanResultId}", scanResultId);
+            
+            scanResult = await unitOfWork.ScanResults.GetByIdAsync(scanResultId);
             if (scanResult == null)
             {
-                _logger.LogError("ScanResult {ScanResultId} non trouvé", scanResultId);
+                logger.LogError("❌ [SCAN-ERROR] ScanResult {ScanResultId} non trouvé en base", scanResultId);
                 return;
             }
 
-            var website = await _unitOfWork.Websites.GetByIdAsync(scanResult.WebsiteId);
+            logger.LogInformation("✅ [SCAN-DB] ScanResult récupéré: {ScanId}, Status={Status}", scanResult.ScanId, scanResult.Status);
+
+            var website = await unitOfWork.Websites.GetByIdAsync(scanResult.WebsiteId);
             if (website == null)
             {
-                await UpdateScanStatus(scanResult, ScanStatus.Failed, "Site web non trouvé");
+                logger.LogError("❌ [SCAN-ERROR] Website {WebsiteId} non trouvé pour le scan {ScanId}", scanResult.WebsiteId, scanResult.ScanId);
+                await UpdateScanStatus(scanResult, ScanStatus.Failed, "Site web non trouvé", unitOfWork);
                 return;
             }
 
-            _logger.LogInformation("Démarrage du scan {ScanId} pour {WebsiteUrl}", scanResult.ScanId, website.Url);
+            logger.LogInformation("🌐 [SCAN-WEBSITE] Website trouvé: {WebsiteName} ({WebsiteUrl}), IsActive={IsActive}", 
+                website.Name, website.Url, website.IsActive);
+
+            if (!website.IsActive)
+            {
+                logger.LogWarning("⚠️ [SCAN-WARNING] Website {WebsiteId} est inactif, arrêt du scan", website.Id);
+                await UpdateScanStatus(scanResult, ScanStatus.Failed, "Site web inactif", unitOfWork);
+                return;
+            }
+
+            logger.LogInformation("🚀 [SCAN-START] Démarrage du scan {ScanId} pour {WebsiteUrl}", scanResult.ScanId, website.Url);
 
             // Mettre à jour le statut
-            await UpdateScanStatus(scanResult, ScanStatus.Running);
+            logger.LogInformation("📝 [SCAN-STATUS] Passage du statut à Running pour {ScanId}", scanResult.ScanId);
+            await UpdateScanStatus(scanResult, ScanStatus.Running, null, unitOfWork);
 
             // Phase 1: Crawling
-            _logger.LogInformation("Phase 1: Crawling du site {WebsiteUrl}", website.Url);
+            logger.LogInformation("🕷️ [SCAN-PHASE-1] Début crawling du site {WebsiteUrl} (MaxDepth={MaxDepth}, Subdomains={IncludeSubdomains})", 
+                website.Url, website.MaxDepth, website.IncludeSubdomains);
             
-            var urls = await _webCrawler.CrawlAsync(
-                website.Url, 
-                website.MaxDepth, 
-                website.IncludeSubdomains);
+            var crawlStartTime = DateTime.UtcNow;
+            List<string> urls;
+            
+            try
+            {
+                urls = await webCrawler.CrawlAsync(
+                    website.Url, 
+                    website.MaxDepth, 
+                    website.IncludeSubdomains);
+                
+                var crawlDuration = DateTime.UtcNow - crawlStartTime;
+                logger.LogInformation("✅ [SCAN-CRAWL] Crawling terminé en {Duration}ms: {UrlCount} URLs trouvées", 
+                    crawlDuration.TotalMilliseconds, urls.Count);
+                
+                // Log des premières URLs pour debug
+                var urlsToLog = urls.Take(5).ToList();
+                logger.LogDebug("[SCAN-CRAWL-URLS] Premières URLs: {Urls}", string.Join(", ", urlsToLog));
+            }
+            catch (Exception crawlEx)
+            {
+                logger.LogError(crawlEx, "❌ [SCAN-CRAWL-ERROR] Erreur lors du crawling de {WebsiteUrl}", website.Url);
+                await UpdateScanStatus(scanResult, ScanStatus.Failed, $"Erreur crawling: {crawlEx.Message}", unitOfWork);
+                return;
+            }
 
             if (!urls.Any())
             {
-                await UpdateScanStatus(scanResult, ScanStatus.Failed, "Aucune page accessible trouvée");
+                logger.LogWarning("⚠️ [SCAN-CRAWL-EMPTY] Aucune page accessible trouvée pour {WebsiteUrl}", website.Url);
+                await UpdateScanStatus(scanResult, ScanStatus.Failed, "Aucune page accessible trouvée", unitOfWork);
                 return;
             }
 
-            _logger.LogInformation("Crawling terminé: {UrlCount} URLs trouvées", urls.Count);
-
             // Phase 2: Analyse d'accessibilité
-            _logger.LogInformation("Phase 2: Analyse d'accessibilité");
+            logger.LogInformation("🔍 [SCAN-PHASE-2] Début analyse d'accessibilité - {UrlCount} pages à analyser", urls.Count);
             
             var allIssues = new List<AccessibilityIssue>();
             var pagesAnalyzed = 0;
+            var maxPagesToAnalyze = Math.Min(urls.Count, 50); // Limiter à 50 pages pour éviter les timeouts
+            var analysisStartTime = DateTime.UtcNow;
 
-            foreach (var url in urls.Take(50)) // Limiter à 50 pages pour éviter les timeouts
+            logger.LogInformation("📊 [SCAN-ANALYSIS] Analyse limitée à {MaxPages} pages sur {TotalPages} trouvées", 
+                maxPagesToAnalyze, urls.Count);
+
+            foreach (var url in urls.Take(maxPagesToAnalyze))
             {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    logger.LogWarning("⏹️ [SCAN-CANCELLED] Scan annulé par timeout pour {ScanId}", scanResult.ScanId);
+                    await UpdateScanStatus(scanResult, ScanStatus.Failed, "Scan annulé par timeout", unitOfWork);
+                    return;
+                }
+
                 try
                 {
-                    var content = await _webCrawler.GetPageContentAsync(url);
-                    var issues = await _accessibilityAnalyzer.AnalyzePageAsync(url, content);
+                    logger.LogDebug("🔍 [SCAN-PAGE] Analyse de la page {PageNumber}/{MaxPages}: {Url}", 
+                        pagesAnalyzed + 1, maxPagesToAnalyze, url);
+                    
+                    var pageStartTime = DateTime.UtcNow;
+                    var content = await webCrawler.GetPageContentAsync(url);
+                    var getContentDuration = DateTime.UtcNow - pageStartTime;
+                    
+                    logger.LogDebug("📄 [SCAN-CONTENT] Contenu récupéré en {Duration}ms pour {Url} ({ContentLength} chars)", 
+                        getContentDuration.TotalMilliseconds, url, content?.Length ?? 0);
+
+                    if (string.IsNullOrWhiteSpace(content))
+                    {
+                        logger.LogWarning("⚠️ [SCAN-CONTENT-EMPTY] Contenu vide pour {Url}", url);
+                        pagesAnalyzed++;
+                        continue;
+                    }
+
+                    var analyzeStartTime = DateTime.UtcNow;
+                    var issues = await accessibilityAnalyzer.AnalyzePageAsync(url, content);
+                    var analyzeDuration = DateTime.UtcNow - analyzeStartTime;
+                    
+                    logger.LogDebug("✅ [SCAN-ANALYZE] Page analysée en {Duration}ms: {Url} - {IssueCount} problèmes trouvés", 
+                        analyzeDuration.TotalMilliseconds, url, issues.Count);
                     
                     // Associer les problèmes au scan
                     foreach (var issue in issues)
@@ -155,32 +251,39 @@ public class ScanService : IScanService
                     pagesAnalyzed++;
                     
                     // Mettre à jour le progrès périodiquement
-                    if (pagesAnalyzed % 5 == 0)
+                    if (pagesAnalyzed % 5 == 0 || pagesAnalyzed == maxPagesToAnalyze)
                     {
                         scanResult.PagesScanned = pagesAnalyzed;
-                        await _unitOfWork.SaveChangesAsync();
+                        await unitOfWork.SaveChangesAsync();
+                        
+                        var progressPercent = (pagesAnalyzed * 100) / maxPagesToAnalyze;
+                        logger.LogInformation("📈 [SCAN-PROGRESS] Progrès: {PagesAnalyzed}/{MaxPages} pages ({ProgressPercent}%) - {TotalIssues} problèmes trouvés", 
+                            pagesAnalyzed, maxPagesToAnalyze, progressPercent, allIssues.Count);
                     }
-
-                    _logger.LogDebug("Page analysée: {Url} - {IssueCount} problèmes", url, issues.Count);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Erreur lors de l'analyse de {Url}", url);
+                    logger.LogWarning(ex, "⚠️ [SCAN-PAGE-ERROR] Erreur lors de l'analyse de {Url}: {ErrorMessage}", url, ex.Message);
+                    pagesAnalyzed++; // Compter même en cas d'erreur pour éviter un blocage
                     // Continuer avec les autres pages
                 }
             }
 
+            var totalAnalysisDuration = DateTime.UtcNow - analysisStartTime;
+            logger.LogInformation("✅ [SCAN-ANALYSIS-COMPLETE] Analyse terminée en {Duration}s: {PagesAnalyzed} pages, {TotalIssues} problèmes", 
+                totalAnalysisDuration.TotalSeconds, pagesAnalyzed, allIssues.Count);
+
             // Sauvegarder tous les problèmes
             foreach (var issue in allIssues)
             {
-                await _unitOfWork.AccessibilityIssues.AddAsync(issue);
+                await unitOfWork.AccessibilityIssues.AddAsync(issue);
             }
 
             // Phase 3: Calcul du score
-            _logger.LogInformation("Phase 3: Calcul du score");
+            logger.LogInformation("🧮 [SCAN-PHASE-3] Calcul du score");
             
-            var score = await _accessibilityAnalyzer.CalculateScoreAsync(allIssues, pagesAnalyzed);
-            var grade = await _accessibilityAnalyzer.GetGradeFromScoreAsync(score);
+            var score = await accessibilityAnalyzer.CalculateScoreAsync(allIssues, pagesAnalyzed);
+            var grade = await accessibilityAnalyzer.GetGradeFromScoreAsync(score);
 
             // Mettre à jour les résultats
             scanResult.PagesScanned = pagesAnalyzed;
@@ -190,16 +293,16 @@ public class ScanService : IScanService
             scanResult.CriticalIssues = allIssues.Count(i => i.Severity == IssueSeverity.Critical);
             scanResult.WarningIssues = allIssues.Count(i => i.Severity == IssueSeverity.Warning);
             scanResult.InfoIssues = allIssues.Count(i => i.Severity == IssueSeverity.Info);
-            scanResult.CompletedAt = DateTime.UtcNow;
+            scanResult.CompletedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Utc);
             scanResult.Status = ScanStatus.Completed;
 
             // Mettre à jour la date du dernier scan du site
             website.LastScanAt = DateTime.UtcNow;
-            await _unitOfWork.Websites.UpdateAsync(website);
+            await unitOfWork.Websites.UpdateAsync(website);
 
-            await _unitOfWork.SaveChangesAsync();
+            await unitOfWork.SaveChangesAsync();
 
-            _logger.LogInformation("Scan {ScanId} terminé avec succès. Score: {Score}/100, Grade: {Grade}", 
+            logger.LogInformation("🏁 [SCAN-COMPLETE] Scan {ScanId} terminé avec succès. Score: {Score}/100, Grade: {Grade}", 
                 scanResult.ScanId, score, grade);
 
             // Phase 4: Génération du rapport PDF (en arrière-plan)
@@ -207,29 +310,29 @@ public class ScanService : IScanService
             {
                 try
                 {
-                    _logger.LogInformation("Génération du rapport PDF pour le scan {ScanId}", scanResult.ScanId);
+                    logger.LogInformation("📄 [SCAN-PDF] Génération du rapport PDF pour le scan {ScanId}", scanResult.ScanId);
                     
                     // Le rapport sera généré à la demande ou lors du premier accès
                     // pour optimiser les performances
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Erreur lors de la génération du rapport pour le scan {ScanId}", scanResult.ScanId);
+                    logger.LogError(ex, "❌ [SCAN-PDF-ERROR] Erreur lors de la génération du rapport pour le scan {ScanId}", scanResult.ScanId);
                 }
             });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erreur lors de l'exécution du scan {ScanId}", scanResult?.ScanId ?? "inconnu");
+            logger.LogError(ex, "❌ [SCAN-EXECUTION-ERROR] Erreur lors de l'exécution du scan {ScanId}", scanResult?.ScanId ?? "inconnu");
             
             if (scanResult != null)
             {
-                await UpdateScanStatus(scanResult, ScanStatus.Failed, $"Erreur interne: {ex.Message}");
+                await UpdateScanStatus(scanResult, ScanStatus.Failed, $"Erreur interne: {ex.Message}", unitOfWork);
             }
         }
     }
 
-    private async Task UpdateScanStatus(ScanResult scanResult, ScanStatus status, string? errorMessage = null)
+    private async Task UpdateScanStatus(ScanResult scanResult, ScanStatus status, string? errorMessage, IUnitOfWork unitOfWork)
     {
         scanResult.Status = status;
         
@@ -240,10 +343,10 @@ public class ScanService : IScanService
 
         if (status == ScanStatus.Failed || status == ScanStatus.Completed)
         {
-            scanResult.CompletedAt = DateTime.UtcNow;
+            scanResult.CompletedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Utc);
         }
 
-        await _unitOfWork.ScanResults.UpdateAsync(scanResult);
-        await _unitOfWork.SaveChangesAsync();
+        await unitOfWork.ScanResults.UpdateAsync(scanResult);
+        await unitOfWork.SaveChangesAsync();
     }
 }

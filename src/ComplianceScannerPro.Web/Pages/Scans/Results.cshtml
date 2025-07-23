@@ -1,0 +1,406 @@
+@page "/scans/{scanId}/results"
+@model ComplianceScannerPro.Web.Pages.Scans.ResultsModel
+@{
+    ViewData["Title"] = $"Résultats du scan - {Model.ScanResult?.WebsiteName}";
+}
+
+<div class="container-fluid">
+    @if (Model.ScanResult == null)
+    {
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                        <h4>Scan non trouvé</h4>
+                        <p class="text-muted">Le scan demandé n'existe pas ou n'est pas accessible.</p>
+                        <a href="/scans/start" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Lancer un nouveau scan
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- En-tête avec résumé -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h1 class="display-6 mb-1">@Model.ScanResult.WebsiteName</h1>
+                        <div class="d-flex align-items-center">
+                            <span class="text-muted me-3">@Model.ScanResult.WebsiteUrl</span>
+                            <span class="badge bg-light text-dark me-2">
+                                Scanné le @Model.ScanResult.CompletedAt?.ToString("dd/MM/yyyy à HH:mm")
+                            </span>
+                            <span class="badge bg-info">@Model.ScanResult.PagesScanned pages analysées</span>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="/api/v1/scans/@Model.ScanResult.ScanId/report" class="btn btn-outline-primary">
+                            <i class="fas fa-download me-2"></i>Rapport PDF
+                        </a>
+                        <a href="/scans/start" class="btn btn-primary">
+                            <i class="fas fa-redo me-2"></i>Nouveau scan
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Métriques principales -->
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body text-center">
+                                <div class="score-circle-large mb-3" data-score="@Model.ScanResult.Score">
+                                    <span class="score-value">@Model.ScanResult.Score</span>
+                                    <span class="score-max">/100</span>
+                                </div>
+                                <h6 class="card-title">Score RGAA</h6>
+                                <p class="text-muted small mb-0">Conformité générale</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body text-center">
+                                <div class="grade-badge-large grade-@Model.ScanResult.Grade.ToString().ToLower() mb-3">
+                                    @Model.ScanResult.Grade
+                                </div>
+                                <h6 class="card-title">Note globale</h6>
+                                <p class="text-muted small mb-0">@Model.GetGradeDescription(Model.ScanResult.Grade)</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body text-center">
+                                <div class="metric-large text-danger mb-3">
+                                    @Model.ScanResult.TotalIssues
+                                </div>
+                                <h6 class="card-title">Problèmes détectés</h6>
+                                <div class="d-flex justify-content-center gap-2 small">
+                                    <span class="badge bg-danger">@Model.ScanResult.CriticalIssues critiques</span>
+                                    <span class="badge bg-warning">@Model.ScanResult.WarningIssues moyens</span>
+                                    <span class="badge bg-info">@Model.ScanResult.InfoIssues infos</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body text-center">
+                                <div class="metric-large text-primary mb-3">
+                                    @Model.ScanResult.PagesScanned
+                                </div>
+                                <h6 class="card-title">Pages analysées</h6>
+                                <p class="text-muted small mb-0">Couverture du site</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Graphique de répartition des problèmes -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-chart-pie text-primary me-2"></i>
+                            Répartition des problèmes par règle RGAA
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="issuesChart" height="100"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-lightbulb text-warning me-2"></i>
+                            Recommandations prioritaires
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="priority-recommendations">
+                            @if (Model.ScanResult.CriticalIssues > 0)
+                            {
+                                <div class="recommendation-item">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                                        <strong>Urgent</strong>
+                                    </div>
+                                    <p class="small mb-3">Corrigez d'abord les @Model.ScanResult.CriticalIssues problèmes critiques qui bloquent l'accessibilité.</p>
+                                </div>
+                            }
+                            @if (Model.ScanResult.Score < 50)
+                            {
+                                <div class="recommendation-item">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-chart-line text-primary me-2"></i>
+                                        <strong>Focus</strong>
+                                    </div>
+                                    <p class="small mb-3">Concentrez-vous sur les images, formulaires et navigation pour améliorer rapidement le score.</p>
+                                </div>
+                            }
+                            <div class="recommendation-item">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-book text-info me-2"></i>
+                                    <strong>Formation</strong>
+                                </div>
+                                <p class="small mb-0">Consultez notre guide RGAA pour comprendre chaque règle d'accessibilité.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtres et liste des problèmes -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-list text-primary me-2"></i>
+                                Détail des problèmes d'accessibilité
+                            </h5>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-outline-secondary" id="export-csv-btn">
+                                    <i class="fas fa-file-csv me-1"></i>Export CSV
+                                </button>
+                                <button class="btn btn-sm btn-outline-primary" id="toggle-filters">
+                                    <i class="fas fa-filter me-1"></i>Filtres
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Panneau de filtres -->
+                    <div class="card-body border-bottom bg-light collapse" id="filters-panel">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label class="form-label small">Sévérité</label>
+                                <select class="form-select form-select-sm" id="severity-filter">
+                                    <option value="">Toutes les sévérités</option>
+                                    <option value="Critical">Critiques</option>
+                                    <option value="Warning">Avertissements</option>
+                                    <option value="Info">Informations</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small">Règle RGAA</label>
+                                <select class="form-select form-select-sm" id="rule-filter">
+                                    <option value="">Toutes les règles</option>
+                                    @foreach (var rule in Model.AvailableRules)
+                                    {
+                                        <option value="@rule">@rule</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small">Recherche dans le titre</label>
+                                <input type="text" class="form-control form-control-sm" id="search-filter" placeholder="Rechercher...">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small">&nbsp;</label>
+                                <div class="d-flex gap-1">
+                                    <button class="btn btn-sm btn-primary" id="apply-filters">Filtrer</button>
+                                    <button class="btn btn-sm btn-outline-secondary" id="reset-filters">Reset</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-body p-0">
+                        <!-- Liste des problèmes -->
+                        <div id="issues-container">
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Chargement...</span>
+                                </div>
+                                <p class="text-muted mt-2">Chargement des problèmes...</p>
+                            </div>
+                        </div>
+
+                        <!-- Pagination -->
+                        <div class="d-flex justify-content-between align-items-center p-3 border-top bg-light">
+                            <div class="text-muted small" id="pagination-info">
+                                <!-- Info de pagination -->
+                            </div>
+                            <div id="pagination-controls">
+                                <!-- Contrôles de pagination -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        window.scanData = {
+            scanId: '@Model.ScanResult?.ScanId',
+            totalIssues: @(Model.ScanResult?.TotalIssues ?? 0),
+            criticalIssues: @(Model.ScanResult?.CriticalIssues ?? 0),
+            warningIssues: @(Model.ScanResult?.WarningIssues ?? 0),
+            infoIssues: @(Model.ScanResult?.InfoIssues ?? 0)
+        };
+    </script>
+    <script src="~/js/scan-results.js"></script>
+}
+
+@section Styles {
+    <style>
+        .score-circle-large {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #0d6efd, #0056b3);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .score-value {
+            font-size: 2rem;
+            font-weight: bold;
+            line-height: 1;
+        }
+
+        .score-max {
+            font-size: 0.875rem;
+            opacity: 0.8;
+        }
+
+        .grade-badge-large {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 0 auto;
+        }
+
+        .grade-a { background: linear-gradient(135deg, #198754, #157347); color: white; }
+        .grade-b { background: linear-gradient(135deg, #0d6efd, #0056b3); color: white; }
+        .grade-c { background: linear-gradient(135deg, #ffc107, #f7931e); color: white; }
+        .grade-d { background: linear-gradient(135deg, #fd7e14, #e25c0d); color: white; }
+        .grade-f { background: linear-gradient(135deg, #dc3545, #bb2d3b); color: white; }
+
+        .metric-large {
+            font-size: 2.5rem;
+            font-weight: bold;
+        }
+
+        .recommendation-item {
+            padding: 15px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .recommendation-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .issue-item {
+            border-bottom: 1px solid #e9ecef;
+            padding: 20px;
+            transition: background-color 0.2s ease;
+        }
+
+        .issue-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .issue-item:last-child {
+            border-bottom: none;
+        }
+
+        .severity-badge {
+            font-weight: 600;
+            font-size: 0.75rem;
+            padding: 4px 8px;
+        }
+
+        .severity-critical { background-color: #dc3545; }
+        .severity-warning { background-color: #ffc107; color: #000; }
+        .severity-info { background-color: #0dcaf0; color: #000; }
+
+        .code-block {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .selector-path {
+            background-color: #e9ecef;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.8rem;
+        }
+
+        .fix-suggestion {
+            background-color: #d1edff;
+            border-left: 4px solid #0d6efd;
+            padding: 12px;
+            margin-top: 10px;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .page-link {
+            color: #6c757d;
+            text-decoration: none;
+            font-size: 0.875rem;
+        }
+
+        .page-link:hover {
+            color: #0d6efd;
+            text-decoration: underline;
+        }
+
+        @@media (max-width: 768px) {
+            .score-circle-large,
+            .grade-badge-large {
+                width: 70px;
+                height: 70px;
+            }
+
+            .score-value {
+                font-size: 1.5rem;
+            }
+
+            .grade-badge-large {
+                font-size: 1.5rem;
+            }
+
+            .metric-large {
+                font-size: 2rem;
+            }
+        }
+    </style>
+}
