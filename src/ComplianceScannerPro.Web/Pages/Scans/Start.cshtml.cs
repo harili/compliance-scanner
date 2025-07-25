@@ -28,7 +28,11 @@ public class StartModel : PageModel
         _logger = logger;
     }
 
+    [BindProperty(SupportsGet = true)]
+    public int? WebsiteId { get; set; }
+    
     public List<WebsiteDto> Websites { get; set; } = new();
+    public WebsiteDto? SelectedWebsite { get; set; }
     public bool CanStartScan { get; set; } = true;
     public string? ErrorMessage { get; set; }
 
@@ -57,6 +61,17 @@ public class StartModel : PageModel
                 IncludeSubdomains = w.IncludeSubdomains,
                 UserId = w.UserId
             }).OrderBy(w => w.Name).ToList();
+
+            // Si un websiteId est spécifié, vérifier qu'il appartient à l'utilisateur et le sélectionner
+            if (WebsiteId.HasValue)
+            {
+                SelectedWebsite = Websites.FirstOrDefault(w => w.Id == WebsiteId.Value);
+                if (SelectedWebsite == null)
+                {
+                    ErrorMessage = "Site web non trouvé ou accès non autorisé";
+                    return Page();
+                }
+            }
 
             // Vérifier si l'utilisateur peut démarrer un scan
             CanStartScan = await _scanService.CanUserStartScanAsync(userId);

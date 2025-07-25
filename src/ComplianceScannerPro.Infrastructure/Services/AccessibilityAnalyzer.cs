@@ -108,8 +108,8 @@ public class AccessibilityAnalyzer : IAccessibilityAnalyzer
                         PageUrl = url,
                         ElementSelector = $"img[src='{src}']",
                         ElementHtml = img.OuterHtml,
-                        FixSuggestion = "Ajoutez un attribut alt décrivant le contenu de l'image.",
-                        CodeExample = $"<img src=\"{src}\" alt=\"Description de l'image\">"
+                        FixSuggestion = $"RGAA 1.1 : Cette image (src=\"{src}\") porte de l'information et doit avoir un attribut alt décrivant précisément son contenu ou sa fonction. Si c'est un graphique, décrivez les données ; si c'est un bouton, décrivez l'action ; si c'est décorative, ajoutez alt=\"\" et role=\"presentation\".",
+                        CodeExample = $"<!-- Si informative -->\n<img src=\"{src}\" alt=\"Graphique montrant une augmentation de 25% des ventes en 2024\">\n<!-- Si décorative -->\n<img src=\"{src}\" alt=\"\" role=\"presentation\">"
                     });
                 }
             }
@@ -143,8 +143,8 @@ public class AccessibilityAnalyzer : IAccessibilityAnalyzer
                         PageUrl = url,
                         ElementSelector = $"a[href='{href}']",
                         ElementHtml = link.OuterHtml,
-                        FixSuggestion = "Utilisez un texte de lien descriptif du contenu ou de la fonction du lien.",
-                        CodeExample = "<a href=\"/contact\">Contacter notre équipe support</a>"
+                        FixSuggestion = $"RGAA 6.1 : Ce lien avec le texte \"{text}\" n'est pas assez explicite. Le texte doit permettre de comprendre la fonction ou la destination du lien hors contexte. Évitez 'cliquez ici', 'en savoir plus', 'lire la suite'. Préférez un texte auto-porteur ou utilisez aria-label pour compléter.",
+                        CodeExample = $"<!-- Au lieu de : {text} -->\\n<a href=\\\"{href}\\\">Télécharger le rapport annuel 2024 (PDF, 2MB)</a>\\n<!-- Ou avec aria-label -->\\n<a href=\\\"{href}\\\" aria-label=\\\"En savoir plus sur nos services d'audit RGAA\\\">{text}</a>"
                     });
                 }
             }
@@ -177,8 +177,8 @@ public class AccessibilityAnalyzer : IAccessibilityAnalyzer
                         PageUrl = url,
                         ElementSelector = $"input[name='{name}']",
                         ElementHtml = input.OuterHtml,
-                        FixSuggestion = "Associez une étiquette au champ avec l'attribut for ou aria-label.",
-                        CodeExample = $"<label for=\"{id}\">Libellé du champ</label>\n<input type=\"text\" id=\"{id}\" name=\"{name}\">"
+                        FixSuggestion = $"RGAA 11.1 : Ce champ de formulaire (name=\"{name}\") n'a pas d'étiquette associée. Chaque champ doit avoir un label explicite lié par l'attribut 'for', ou utiliser aria-label/aria-labelledby. Le placeholder n'est pas suffisant car il disparaît lors de la saisie.",
+                        CodeExample = $"<!-- Solution 1 : Label classique -->\\n<label for=\\\"{id}\\\">Adresse email (obligatoire)</label>\\n<input type=\\\"email\\\" id=\\\"{id}\\\" name=\\\"{name}\\\" required>\\n\\n<!-- Solution 2 : aria-label -->\\n<input type=\\\"email\\\" name=\\\"{name}\\\" aria-label=\\\"Adresse email obligatoire\\\" required>"
                     });
                 }
             }
@@ -213,8 +213,8 @@ public class AccessibilityAnalyzer : IAccessibilityAnalyzer
                         PageUrl = url,
                         ElementSelector = "Voir le CSS",
                         ElementHtml = css,
-                        FixSuggestion = "Vérifiez que le contraste est d'au moins 4.5:1 pour le texte normal.",
-                        CodeExample = "color: #333; background: #fff; /* Contraste 12.6:1 */"
+                        FixSuggestion = "RGAA 3.2 : Le contraste détecté semble insuffisant. Le RGAA exige un ratio minimum de 4.5:1 pour le texte normal et 3:1 pour le texte de grande taille (18pt+ ou gras 14pt+). Utilisez un outil comme WebAIM Contrast Checker pour vérifier et ajustez les couleurs.",
+                        CodeExample = "/* Exemples de contrastes conformes RGAA */\n/* Texte sombre sur fond clair : ratio 12.6:1 */\ncolor: #333333; background: #ffffff;\n/* Texte clair sur fond sombre : ratio 15.3:1 */\ncolor: #ffffff; background: #1f1f1f;\n/* Vérifiez sur : https://webaim.org/resources/contrastchecker/ */"
                     });
                 }
             }
@@ -239,8 +239,8 @@ public class AccessibilityAnalyzer : IAccessibilityAnalyzer
                 PageUrl = url,
                 ElementSelector = "title",
                 ElementHtml = title?.OuterHtml ?? "<title></title>",
-                FixSuggestion = "Ajoutez un titre descriptif à la page.",
-                CodeExample = "<title>Accueil - Mon Site Web</title>"
+                FixSuggestion = "RGAA 8.5 : Cette page n'a pas de titre (balise <title>) ou il est vide. Le titre est essentiel pour l'accessibilité car il est la première information lue par les lecteurs d'écran et identifie la page dans les favoris. Il doit être unique et décrire précisément le contenu de la page.",
+                CodeExample = "<!-- Titre spécifique et descriptif -->\\n<title>Résultats du scan RGAA - Site exemple.com - ComplianceScannerPro</title>\\n<!-- Structure recommandée : Contenu principal - Section - Nom du site -->"
             });
         }
         
@@ -263,8 +263,8 @@ public class AccessibilityAnalyzer : IAccessibilityAnalyzer
                 PageUrl = url,
                 ElementSelector = "html",
                 ElementHtml = html?.OuterHtml ?? "<html>",
-                FixSuggestion = "Ajoutez l'attribut lang à l'élément html.",
-                CodeExample = "<html lang=\"fr\">"
+                FixSuggestion = "RGAA 8.3 : L'élément <html> n'a pas d'attribut 'lang' définissant la langue principale de la page. Cet attribut est obligatoire pour que les technologies d'assistance (lecteurs d'écran) utilisent la bonne prononciation et les bonnes règles linguistiques.",
+                CodeExample = "<!-- Pour une page en français -->\\n<html lang=\\\"fr\\\">\\n<!-- Pour une page en anglais -->\\n<html lang=\\\"en\\\">\\n<!-- Pour du français canadien -->\\n<html lang=\\\"fr-CA\\\">"
             });
         }
         
@@ -293,8 +293,8 @@ public class AccessibilityAnalyzer : IAccessibilityAnalyzer
                         PageUrl = url,
                         ElementSelector = $"h{levels[i]}",
                         ElementHtml = headings[i].OuterHtml,
-                        FixSuggestion = "Respectez la hiérarchie des titres sans sauter de niveau.",
-                        CodeExample = $"<h{levels[i-1]}>Titre</h{levels[i-1]}>\n<h{levels[i-1]+1}>Sous-titre</h{levels[i-1]+1}>"
+                        FixSuggestion = $"RGAA 9.1 : Hiérarchie de titres incorrecte détectée (saut du niveau h{levels[i-1]} vers h{levels[i]}). Les titres doivent suivre un ordre logique sans sauter de niveau : h1 puis h2, puis h3, etc. Cela permet aux utilisateurs de technologies d'assistance de naviguer efficacement dans la structure du document.",
+                        CodeExample = $"<!-- Incorrect : saut de niveau -->\\n<h{levels[i-1]}>Titre principal</h{levels[i-1]}>\\n<h{levels[i]}>Sous-titre</h{levels[i]}> ❌\\n\\n<!-- Correct : progression logique -->\\n<h{levels[i-1]}>Titre principal</h{levels[i-1]}>\\n<h{levels[i-1]+1}>Sous-titre</h{levels[i-1]+1}> ✅"
                     });
                 }
             }
@@ -320,8 +320,8 @@ public class AccessibilityAnalyzer : IAccessibilityAnalyzer
                 PageUrl = url,
                 ElementSelector = "body",
                 ElementHtml = "Pas d'élément main trouvé",
-                FixSuggestion = "Ajoutez un élément main pour identifier le contenu principal.",
-                CodeExample = "<main>Contenu principal de la page</main>"
+                FixSuggestion = "RGAA 12.6 : Cette page n'a pas d'élément <main> pour identifier la zone de contenu principal. La balise <main> (unique par page) permet aux utilisateurs de technologies d'assistance de se rendre directement au contenu principal en évitant la navigation et les en-têtes répétitifs.",
+                CodeExample = "<!-- Structure de page accessible -->\\n<header>\\n  <nav>Menu de navigation</nav>\\n</header>\\n<main>\\n  <h1>Titre principal de la page</h1>\\n  <p>Contenu principal unique de cette page...</p>\\n</main>\\n<footer>Pied de page</footer>"
             });
         }
         
@@ -349,8 +349,8 @@ public class AccessibilityAnalyzer : IAccessibilityAnalyzer
                         PageUrl = url,
                         ElementSelector = $"img[src='{src}']",
                         ElementHtml = img.OuterHtml,
-                        FixSuggestion = "Vérifiez si cette image est vraiment décorative ou si elle nécessite une description.",
-                        CodeExample = "<img src=\"decoration.png\" alt=\"\" role=\"presentation\">"
+                        FixSuggestion = $"RGAA 1.2 : Image potentiellement décorative détectée (src=\"{src}\"). Si cette image est purement décorative (ne porte aucune information), elle doit avoir alt=\"\" ET role=\"presentation\" pour être ignorée par les lecteurs d'écran. Si elle porte de l'information, elle doit avoir un alt descriptif.",
+                        CodeExample = $"<!-- Si vraiment décorative -->\\n<img src=\\\"{src}\\\" alt=\\\"\\\" role=\\\"presentation\\\">\\n\\n<!-- Si informative -->\\n<img src=\\\"{src}\\\" alt=\\\"Description précise du contenu informationnel\\\">\\n\\n<!-- Alternative CSS pour décoratif -->\\n<div style=\\\"background-image: url({src}); width: 100px; height: 100px;\\\"></div>"
                     });
                 }
             }
@@ -383,8 +383,8 @@ public class AccessibilityAnalyzer : IAccessibilityAnalyzer
                         PageUrl = url,
                         ElementSelector = list.Name,
                         ElementHtml = list.OuterHtml,
-                        FixSuggestion = "Les listes ne doivent contenir que des éléments li comme enfants directs.",
-                        CodeExample = "<ul><li>Item 1</li><li>Item 2</li></ul>"
+                        FixSuggestion = "RGAA 9.3 : Structure de liste incorrecte détectée. Les éléments <ul>, <ol> et <dl> ne doivent contenir directement que des éléments <li> (ou <dt>/<dd> pour <dl>). Tout autre contenu doit être placé à l'intérieur des <li>. Cette structure permet aux lecteurs d'écran d'annoncer correctement le nombre d'éléments.",
+                        CodeExample = "<!-- Incorrect -->\\n<ul>\\n  <p>Titre de liste</p> ❌\\n  <li>Item 1</li>\\n</ul>\\n\\n<!-- Correct -->\\n<p>Titre de liste</p>\\n<ul>\\n  <li>Item 1</li>\\n  <li>Item 2 avec <strong>texte mis en valeur</strong></li>\\n</ul> ✅"
                     });
                 }
             }

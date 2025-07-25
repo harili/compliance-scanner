@@ -85,7 +85,8 @@ public class QuestPdfReportGenerator : IReportGenerator
             {
                 page.Size(PageSizes.A4);
                 page.Margin(40);
-                page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Arial"));
+                page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Arial")
+                    .Fallback(TextStyle.Default.FontFamily("Segoe UI Emoji")));
 
                 page.Header().Element(header => ComposeHeader(header, scanResult, website, brandedForAgency));
                 page.Content().Element(content => ComposeContent(content, scanResult, website, issues));
@@ -96,40 +97,45 @@ public class QuestPdfReportGenerator : IReportGenerator
 
     private void ComposeHeader(IContainer container, ScanResult scanResult, Website? website, bool brandedForAgency)
     {
-        container.Row(row =>
+        container.Column(mainColumn =>
         {
-            row.RelativeItem().Column(column =>
+            // Contenu principal du header
+            mainColumn.Item().Row(row =>
             {
-                if (brandedForAgency)
+                row.RelativeItem().Column(column =>
                 {
-                    column.Item().Text("RAPPORT D'AUDIT D'ACCESSIBILITÉ").FontSize(20).Bold().FontColor(PrimaryColor);
-                    column.Item().Text("Conformité RGAA 4.1").FontSize(14).FontColor(DarkGrayColor);
-                }
-                else
-                {
-                    column.Item().Text("ComplianceScannerPro").FontSize(16).Bold().FontColor(PrimaryColor);
-                    column.Item().Text("Rapport d'audit d'accessibilité RGAA").FontSize(12).FontColor(DarkGrayColor);
-                }
-                
-                column.Item().PaddingTop(10).Text($"Site web: {website?.Name ?? "Non spécifié"}").FontSize(12).Bold();
-                column.Item().Text($"URL: {website?.Url ?? "N/A"}").FontSize(10).FontColor(DarkGrayColor);
-            });
-
-            row.ConstantItem(120).Column(column =>
-            {
-                var grade = GetGradeInfo(scanResult.Grade);
-                column.Item().AlignRight().Width(80).Height(80).Background(grade.Color).Padding(5)
-                    .AlignCenter().AlignMiddle().Column(gradeColumn =>
+                    if (brandedForAgency)
                     {
-                        gradeColumn.Item().Text("SCORE").FontSize(8).Bold().FontColor(Colors.White);
-                        gradeColumn.Item().Text($"{scanResult.Score}").FontSize(24).Bold().FontColor(Colors.White);
-                        gradeColumn.Item().Text("/100").FontSize(10).FontColor(Colors.White);
-                        gradeColumn.Item().Text($"Grade {scanResult.Grade}").FontSize(10).Bold().FontColor(Colors.White);
-                    });
-            });
-        });
+                        column.Item().Text("RAPPORT D'AUDIT D'ACCESSIBILITÉ").FontSize(20).Bold().FontColor(PrimaryColor);
+                        column.Item().Text("Conformité RGAA 4.1").FontSize(14).FontColor(DarkGrayColor);
+                    }
+                    else
+                    {
+                        column.Item().Text("ComplianceScannerPro").FontSize(16).Bold().FontColor(PrimaryColor);
+                        column.Item().Text("Rapport d'audit d'accessibilité RGAA").FontSize(12).FontColor(DarkGrayColor);
+                    }
+                    
+                    column.Item().PaddingTop(10).Text($"Site web: {website?.Name ?? "Non spécifié"}").FontSize(12).Bold();
+                    column.Item().Text($"URL: {website?.Url ?? "N/A"}").FontSize(10).FontColor(DarkGrayColor);
+                });
 
-        container.PaddingTop(20).BorderBottom(1).BorderColor(Colors.Grey.Lighten2);
+                row.ConstantItem(120).Column(column =>
+                {
+                    var grade = GetGradeInfo(scanResult.Grade);
+                    column.Item().AlignRight().Width(80).Height(80).Background(grade.Color).Padding(5)
+                        .AlignCenter().AlignMiddle().Column(gradeColumn =>
+                        {
+                            gradeColumn.Item().Text("SCORE").FontSize(8).Bold().FontColor(Colors.White);
+                            gradeColumn.Item().Text($"{scanResult.Score}").FontSize(24).Bold().FontColor(Colors.White);
+                            gradeColumn.Item().Text("/100").FontSize(10).FontColor(Colors.White);
+                            gradeColumn.Item().Text($"Grade {scanResult.Grade}").FontSize(10).Bold().FontColor(Colors.White);
+                        });
+                });
+            });
+
+            // Ligne de séparation
+            mainColumn.Item().PaddingTop(20).BorderBottom(1).BorderColor(Colors.Grey.Lighten2).Text("").FontSize(1);
+        });
     }
 
     private void ComposeContent(IContainer container, ScanResult scanResult, Website? website, List<AccessibilityIssue> issues)
@@ -179,19 +185,19 @@ public class QuestPdfReportGenerator : IReportGenerator
                     if (scanResult.Score < 60)
                     {
                         summaryColumn.Item().PaddingTop(5)
-                            .Text("⚠️ Actions recommandées: Correction prioritaire des problèmes critiques avant mise en production.")
+                            .Text("URGENT - Actions recommandées: Correction prioritaire des problèmes critiques avant mise en production.")
                             .FontSize(11).Bold().FontColor(DangerColor);
                     }
                     else if (scanResult.Score < 80)
                     {
                         summaryColumn.Item().PaddingTop(5)
-                            .Text("📋 Actions recommandées: Amélioration progressive pour atteindre une conformité totale.")
+                            .Text("PLAN - Actions recommandées: Amélioration progressive pour atteindre une conformité totale.")
                             .FontSize(11).Bold().FontColor(WarningColor);
                     }
                     else
                     {
                         summaryColumn.Item().PaddingTop(5)
-                            .Text("✅ Bon niveau de conformité. Maintenir les bonnes pratiques et corriger les problèmes restants.")
+                            .Text("OK - Bon niveau de conformité. Maintenir les bonnes pratiques et corriger les problèmes restants.")
                             .FontSize(11).Bold().FontColor(SuccessColor);
                     }
                 });
@@ -333,7 +339,7 @@ public class QuestPdfReportGenerator : IReportGenerator
                 {
                     recommendations.Item().PaddingBottom(10).Row(row =>
                     {
-                        row.ConstantItem(20).AlignTop().Text("🔴").FontSize(12);
+                        row.ConstantItem(30).AlignTop().Text("[URGENT]").FontSize(9).Bold().FontColor(DangerColor);
                         row.RelativeItem().Column(col =>
                         {
                             col.Item().Text("Corriger les problèmes critiques (priorité 1)").FontSize(11).Bold();
@@ -347,7 +353,7 @@ public class QuestPdfReportGenerator : IReportGenerator
                 {
                     recommendations.Item().PaddingBottom(10).Row(row =>
                     {
-                        row.ConstantItem(20).AlignTop().Text("🟡").FontSize(12);
+                        row.ConstantItem(30).AlignTop().Text("[MOYEN]").FontSize(9).Bold().FontColor(WarningColor);
                         row.RelativeItem().Column(col =>
                         {
                             col.Item().Text("Améliorer le score global (priorité 2)").FontSize(11).Bold();
@@ -359,7 +365,7 @@ public class QuestPdfReportGenerator : IReportGenerator
                 
                 recommendations.Item().PaddingBottom(10).Row(row =>
                 {
-                    row.ConstantItem(20).AlignTop().Text("📚").FontSize(12);
+                    row.ConstantItem(30).AlignTop().Text("[FORMATION]").FontSize(8).Bold().FontColor(PrimaryColor);
                     row.RelativeItem().Column(col =>
                     {
                         col.Item().Text("Formation de l'équipe").FontSize(11).Bold();
@@ -370,7 +376,7 @@ public class QuestPdfReportGenerator : IReportGenerator
                 
                 recommendations.Item().Row(row =>
                 {
-                    row.ConstantItem(20).AlignTop().Text("🔄").FontSize(12);
+                    row.ConstantItem(30).AlignTop().Text("[AUDIT]").FontSize(8).Bold().FontColor(PrimaryColor);
                     row.RelativeItem().Column(col =>
                     {
                         col.Item().Text("Audit régulier").FontSize(11).Bold();
@@ -446,7 +452,7 @@ public class QuestPdfReportGenerator : IReportGenerator
                             issueColumn.Item().PaddingTop(5).BorderLeft(2).BorderColor(color).PaddingLeft(8)
                                 .Column(fixColumn =>
                                 {
-                                    fixColumn.Item().Text("💡 Suggestion de correction:").FontSize(8).Bold().FontColor(color);
+                                    fixColumn.Item().Text("SOLUTION - Suggestion de correction:").FontSize(8).Bold().FontColor(color);
                                     fixColumn.Item().Text(issue.FixSuggestion).FontSize(8).LineHeight(1.3f);
                                 });
                         }

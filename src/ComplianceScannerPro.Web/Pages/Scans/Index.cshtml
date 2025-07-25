@@ -1,0 +1,297 @@
+@page "/scans"
+@model ComplianceScannerPro.Web.Pages.Scans.IndexModel
+@{
+    ViewData["Title"] = Model.Website != null ? $"Scans de {Model.Website.Name}" : "Historique des scans";
+}
+
+<div class="container-fluid py-4">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-1">
+                        <i class="fas fa-history me-2 text-primary"></i>
+                        @if (Model.Website != null)
+                        {
+                            <span>Scans de @Model.Website.Name</span>
+                        }
+                        else
+                        {
+                            <span>Historique des scans</span>
+                        }
+                    </h1>
+                    @if (Model.Website != null)
+                    {
+                        <p class="text-muted mb-0">
+                            <i class="fas fa-globe me-1"></i>
+                            @Model.Website.Url
+                        </p>
+                    }
+                </div>
+                <div>
+                    @if (Model.Website != null)
+                    {
+                        <a asp-page="/Scans/Start" asp-route-websiteId="@Model.Website.Id" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i>
+                            Nouveau scan
+                        </a>
+                    }
+                    <a asp-page="/Websites/Index" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>
+                        Retour aux sites
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            @Model.ErrorMessage
+        </div>
+    }
+
+    @if (Model.Scans?.Any() == true)
+    {
+        <!-- Tableau des scans -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-3">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-list me-2"></i>
+                    @Model.Scans.Count scan(s) trouvé(s)
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                @if (Model.Website == null)
+                                {
+                                    <th>Site Web</th>
+                                }
+                                <th>Date de scan</th>
+                                <th>Durée</th>
+                                <th>Status</th>
+                                <th>Score</th>
+                                <th>Pages</th>
+                                <th>Problèmes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var scan in Model.Scans)
+                            {
+                                <tr>
+                                    @if (Model.Website == null)
+                                    {
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <i class="bi bi-globe text-primary me-2"></i>
+                                                <div>
+                                                    <div class="fw-medium">@scan.WebsiteName</div>
+                                                    <small class="text-muted">@scan.WebsiteUrl</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    }
+                                    <td>
+                                        <div>
+                                            <div class="fw-medium">@scan.StartedAt.ToString("dd/MM/yyyy")</div>
+                                            <small class="text-muted">@scan.StartedAt.ToString("HH:mm")</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        @if (scan.CompletedAt.HasValue)
+                                        {
+                                            var duration = scan.CompletedAt.Value - scan.StartedAt;
+                                            <span class="badge bg-light text-dark">
+                                                @duration.TotalMinutes.ToString("F1") min
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge @GetStatusBadgeClass(scan.Status)">
+                                            @GetStatusText(scan.Status)
+                                        </span>
+                                    </td>
+                                    <td>
+                                        @if (scan.Score > 0)
+                                        {
+                                            <div class="d-flex align-items-center">
+                                                <span class="badge @GetScoreBadgeClass(scan.Score) fs-6">
+                                                    @scan.Score.ToString("F0")/100
+                                                </span>
+                                                <span class="ms-2 badge @GetGradeBadgeClass(scan.Grade.ToString())">
+                                                    @scan.Grade
+                                                </span>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info text-dark">@scan.PagesScanned</span>
+                                    </td>
+                                    <td>
+                                        @if (scan.TotalIssues > 0)
+                                        {
+                                            <div class="small">
+                                                @if (scan.CriticalIssues > 0)
+                                                {
+                                                    <span class="badge bg-danger me-1">@scan.CriticalIssues C</span>
+                                                }
+                                                @if (scan.WarningIssues > 0)
+                                                {
+                                                    <span class="badge bg-warning me-1">@scan.WarningIssues A</span>
+                                                }
+                                                @if (scan.InfoIssues > 0)
+                                                {
+                                                    <span class="badge bg-info">@scan.InfoIssues I</span>
+                                                }
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Aucun</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            @if (scan.Status == ComplianceScannerPro.Shared.Enums.ScanStatus.Completed)
+                                            {
+                                                <a asp-page="/Scans/Results" asp-route-scanid="@scan.ScanId" 
+                                                   class="btn btn-outline-primary btn-sm" title="Voir les résultats détaillés">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                                <a href="/api/v1/scans/@scan.ScanId/report" 
+                                                   class="btn btn-outline-secondary btn-sm" title="Télécharger le rapport PDF">
+                                                    <i class="bi bi-file-earmark-pdf"></i>
+                                                </a>
+                                            }
+                                            else if (scan.Status == ComplianceScannerPro.Shared.Enums.ScanStatus.Running)
+                                            {
+                                                <a asp-page="/Scans/Start" class="btn btn-outline-info btn-sm" title="Voir le progression">
+                                                    <i class="bi bi-hourglass-split"></i>
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted small">Aucune action</span>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- État vide -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-search fs-1 text-muted mb-3"></i>
+                <h5 class="text-muted mb-3">
+                    @if (Model.Website != null)
+                    {
+                        <span>Aucun scan effectué pour ce site</span>
+                    }
+                    else
+                    {
+                        <span>Aucun scan trouvé</span>
+                    }
+                </h5>
+                <p class="text-muted mb-4">
+                    @if (Model.Website != null)
+                    {
+                        <span>Lancez votre premier scan pour analyser l'accessibilité de @Model.Website.Name</span>
+                    }
+                    else
+                    {
+                        <span>Commencez par ajouter un site web puis lancez un scan d'accessibilité</span>
+                    }
+                </p>
+                @if (Model.Website != null)
+                {
+                    <a asp-page="/Scans/Start" asp-route-websiteId="@Model.Website.Id" class="btn btn-primary btn-lg">
+                        <i class="fas fa-play me-2"></i>
+                        Lancer un scan
+                    </a>
+                }
+                else
+                {
+                    <a asp-page="/Websites/Create" class="btn btn-primary btn-lg me-2">
+                        <i class="fas fa-plus me-2"></i>
+                        Ajouter un site
+                    </a>
+                    <a asp-page="/Dashboard" class="btn btn-outline-primary btn-lg">
+                        <i class="fas fa-home me-2"></i>
+                        Tableau de bord
+                    </a>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@functions {
+    private static string GetStatusBadgeClass(ComplianceScannerPro.Shared.Enums.ScanStatus status)
+    {
+        return status switch
+        {
+            ComplianceScannerPro.Shared.Enums.ScanStatus.Completed => "bg-success",
+            ComplianceScannerPro.Shared.Enums.ScanStatus.Running => "bg-primary",
+            ComplianceScannerPro.Shared.Enums.ScanStatus.Failed => "bg-danger",
+            ComplianceScannerPro.Shared.Enums.ScanStatus.Cancelled => "bg-secondary",
+            _ => "bg-warning"
+        };
+    }
+
+    private static string GetStatusText(ComplianceScannerPro.Shared.Enums.ScanStatus status)
+    {
+        return status switch
+        {
+            ComplianceScannerPro.Shared.Enums.ScanStatus.Completed => "Terminé",
+            ComplianceScannerPro.Shared.Enums.ScanStatus.Running => "En cours",
+            ComplianceScannerPro.Shared.Enums.ScanStatus.Failed => "Échec",
+            ComplianceScannerPro.Shared.Enums.ScanStatus.Cancelled => "Annulé",
+            _ => "En attente"
+        };
+    }
+
+    private static string GetScoreBadgeClass(int score)
+    {
+        return score switch
+        {
+            >= 80 => "bg-success",
+            >= 60 => "bg-warning",
+            >= 40 => "bg-orange",
+            _ => "bg-danger"
+        };
+    }
+
+    private static string GetGradeBadgeClass(string grade)
+    {
+        return grade switch
+        {
+            "A" => "bg-success",
+            "B" => "bg-info",
+            "C" => "bg-warning",
+            "D" => "bg-orange",
+            _ => "bg-danger"
+        };
+    }
+}

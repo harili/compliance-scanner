@@ -252,31 +252,52 @@ public class ScansController : ControllerBase
     {
         try
         {
+            _logger.LogInformation("Tentative de téléchargement du rapport pour le scan {ScanId}", scanId);
+            
             var userId = _userManager.GetUserId(User);
             var scanResult = await _scanService.GetScanResultAsync(scanId);
 
             if (scanResult == null || scanResult.UserId != userId)
+            {
+                _logger.LogWarning("Scan {ScanId} non trouvé ou accès non autorisé pour l'utilisateur {UserId}", scanId, userId);
                 return NotFound();
+            }
+
+            _logger.LogInformation("Scan trouvé: {ScanId}, Status: {Status}, ReportPath: {ReportPath}", scanId, scanResult.Status, scanResult.ReportPdfPath);
 
             if (string.IsNullOrWhiteSpace(scanResult.ReportPdfPath) || !System.IO.File.Exists(scanResult.ReportPdfPath))
             {
-                // Générer le rapport s'il n'existe pas
+                _logger.LogInformation("Génération du rapport PDF nécessaire pour le scan {ScanId}", scanId);
+                
+                // Charger les données nécessaires pour le rapport
+                var website = await _unitOfWork.Websites.GetByIdAsync(scanResult.WebsiteId);
                 var user = await _userManager.FindByIdAsync(userId);
                 var isAgency = user?.IsAgency == true;
                 
+                _logger.LogInformation("Données chargées - Website: {WebsiteName}, IsAgency: {IsAgency}", website?.Name, isAgency);
+                
+                // Assigner le site web au scan result pour le rapport
+                scanResult.Website = website;
+                
+                _logger.LogInformation("Début de la génération du rapport PDF...");
                 scanResult.ReportPdfPath = await _reportGenerator.GeneratePdfReportAsync(scanResult, isAgency);
+                _logger.LogInformation("Rapport PDF généré: {ReportPath}", scanResult.ReportPdfPath);
+                
                 await _unitOfWork.SaveChangesAsync();
+                _logger.LogInformation("Chemin du rapport sauvegardé en base");
             }
 
+            _logger.LogInformation("Lecture du fichier PDF: {ReportPath}", scanResult.ReportPdfPath);
             var fileBytes = await _reportGenerator.GetReportBytesAsync(scanResult.ReportPdfPath);
             var fileName = $"rapport-rgaa-{scanResult.ScanId}.pdf";
 
+            _logger.LogInformation("Envoi du fichier PDF ({FileSize} bytes) avec le nom {FileName}", fileBytes.Length, fileName);
             return File(fileBytes, "application/pdf", fileName);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Erreur lors du téléchargement du rapport pour le scan {ScanId}", scanId);
-            return StatusCode(500);
+            return StatusCode(500, new { error = ex.Message, detail = ex.InnerException?.Message });
         }
     }
 

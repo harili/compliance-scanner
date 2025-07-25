@@ -105,7 +105,7 @@
 
         <!-- Graphique de répartition des problèmes -->
         <div class="row mb-4">
-            <div class="col-md-8">
+            <div class="col-md-12 mb-4">
                 <div class="card border-0 shadow-sm">
                     <div class="card-header bg-white">
                         <h5 class="card-title mb-0">
@@ -114,11 +114,17 @@
                         </h5>
                     </div>
                     <div class="card-body">
-                        <canvas id="issuesChart" height="100"></canvas>
+                        <div style="height: 300px; width: 100%;">
+                            <canvas id="issuesChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
+        </div>
+        
+        <!-- Recommandations prioritaires -->
+        <div class="row mb-4">
+            <div class="col-md-6">
                 <div class="card border-0 shadow-sm">
                     <div class="card-header bg-white">
                         <h5 class="card-title mb-0">

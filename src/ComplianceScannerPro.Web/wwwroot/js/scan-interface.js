@@ -10,6 +10,7 @@ class ScanInterface {
     init() {
         this.bindEvents();
         this.loadRecentScans();
+        this.handlePreSelectedWebsite();
     }
 
     bindEvents() {
@@ -41,7 +42,8 @@ class ScanInterface {
 
     async startScan(websiteId, websiteName, websiteUrl) {
         try {
-            this.showLoadingState();
+            const button = document.querySelector(`[data-website-id="${websiteId}"]`);
+            this.showLoadingState(button);
 
             const response = await fetch('/api/v1/scans/start', {
                 method: 'POST',
@@ -61,12 +63,14 @@ class ScanInterface {
             } else {
                 const errorMessage = result.errors?.length > 0 ? result.errors[0] : result.message || 'Erreur lors du démarrage du scan';
                 this.showError(errorMessage);
-                this.hideLoadingState();
+                const button = document.querySelector(`[data-website-id="${websiteId}"]`);
+                this.hideLoadingState(button);
             }
         } catch (error) {
             console.error('Erreur lors du démarrage du scan:', error);
             this.showError('Erreur de communication avec le serveur');
-            this.hideLoadingState();
+            const button = document.querySelector(`[data-website-id="${websiteId}"]`);
+            this.hideLoadingState(button);
         }
     }
 
@@ -456,25 +460,78 @@ class ScanInterface {
         }, 5000);
     }
 
-    showLoadingState() {
-        document.querySelectorAll('.start-scan-btn').forEach(btn => {
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Démarrage...';
-        });
+    showLoadingState(specificButton = null) {
+        if (specificButton) {
+            // Afficher le loading seulement sur le bouton spécifique
+            specificButton.disabled = true;
+            specificButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Démarrage...';
+        } else {
+            // Fallback : tous les boutons (compatibilité)
+            document.querySelectorAll('.start-scan-btn').forEach(btn => {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Démarrage...';
+            });
+        }
     }
 
-    hideLoadingState() {
-        document.querySelectorAll('.start-scan-btn').forEach(btn => {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-play me-1"></i>Scanner';
-        });
+    hideLoadingState(specificButton = null) {
+        if (specificButton) {
+            // Restaurer seulement le bouton spécifique
+            specificButton.disabled = false;
+            specificButton.innerHTML = '<i class="fas fa-play me-1"></i>Scanner';
+        } else {
+            // Fallback : tous les boutons (compatibilité)
+            document.querySelectorAll('.start-scan-btn').forEach(btn => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-play me-1"></i>Scanner';
+            });
+        }
     }
 
     showScanSelection() {
         document.getElementById('scan-selection-card')?.classList.remove('d-none');
         document.getElementById('scan-progress-card')?.classList.add('d-none');
         document.getElementById('scan-results-card')?.classList.add('d-none');
-        this.hideLoadingState();
+        this.hideLoadingState(); // Ici on restaure tous les boutons car on revient à la sélection
+    }
+    
+    handlePreSelectedWebsite() {
+        // Gérer la pré-sélection d'un site web via le paramètre websiteId
+        if (window.preSelectedWebsite) {
+            const websiteId = window.preSelectedWebsite.Id;
+            const websiteName = window.preSelectedWebsite.Name;
+            const websiteUrl = window.preSelectedWebsite.Url;
+            
+            // Trouver la carte correspondante et la mettre en évidence
+            const websiteCard = document.querySelector(`[data-website-id="${websiteId}"]`);
+            if (websiteCard) {
+                // Ajouter une classe visuelle pour indiquer la pré-sélection
+                websiteCard.classList.add('pre-selected');
+                
+                // Faire défiler vers la carte si nécessaire
+                websiteCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Ajouter du style CSS inline pour un effet visuel immédiat
+                const card = websiteCard.querySelector('.card');
+                if (card) {
+                    card.style.borderColor = '#0d6efd';
+                    card.style.borderWidth = '2px';
+                    card.style.boxShadow = '0 4px 12px rgba(13, 110, 253, 0.2)';
+                }
+                
+                // Optionnel : démarrer automatiquement le scan après un délai
+                // Uncomment si vous voulez un démarrage automatique
+                /*
+                setTimeout(() => {
+                    const startButton = websiteCard.querySelector('.start-scan-btn');
+                    if (startButton && !startButton.disabled) {
+                        console.log(`Démarrage automatique du scan pour ${websiteName}`);
+                        this.startScan(websiteId, websiteName, websiteUrl);
+                    }
+                }, 2000); // 2 secondes de délai pour que l'utilisateur voie la sélection
+                */
+            }
+        }
     }
 }
 
